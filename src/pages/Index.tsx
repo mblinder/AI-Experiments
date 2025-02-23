@@ -67,13 +67,20 @@ const Index = () => {
     initialPageParam: 1
   });
 
-  const allItems = data?.pages.flatMap(page => page.items) || [];
+  const allItems = (data?.pages ?? []).flatMap(page => page.items) || [];
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <MainSidebar />
         <main className="flex-1">
+          <div className="w-full bg-white dark:bg-black">
+            <img 
+              src="/lovable-uploads/8d6ea42d-4040-48db-8efc-fed36f55fcfb.png" 
+              alt="The Bulwark"
+              className="w-full h-24 object-contain py-4"
+            />
+          </div>
           <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 dark:bg-black/80 border-b border-gray-200/50 dark:border-gray-800/50 h-16 flex items-center px-4">
             <SidebarTrigger className="mr-4" />
             <h1 className="text-2xl font-bold">The Bulwark</h1>
