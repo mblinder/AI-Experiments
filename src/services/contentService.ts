@@ -39,12 +39,12 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
       body: { updateDb: true },
     });
 
-    // Fetch content items with their associated tags
+    // Fetch content items with their associated tags using LEFT JOIN
     const { data: items, error, count } = await supabase
       .from('content_items')
       .select(`
         *,
-        content_item_tags!inner (
+        content_item_tags:content_item_tags (
           content_tags (
             id,
             name,
@@ -67,7 +67,7 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
         id: tag.content_tags.id,
         name: tag.content_tags.name,
         type: tag.content_tags.type as ContentTag['type']
-      })) || [];
+      })).filter(Boolean) || [];
 
       // Add source tag if it exists in the item
       if (item.source_tag_id && item.source_tag_name) {
