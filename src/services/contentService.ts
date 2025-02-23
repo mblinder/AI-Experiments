@@ -31,10 +31,6 @@ export async function refreshFeeds() {
   console.log('Starting feed refresh...');
   
   try {
-    // Check if edge function exists and is accessible
-    const { data: functions } = await supabase.functions.list();
-    console.log('Available functions:', functions);
-
     // Call the edge function to fetch new content
     const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
       body: { 
