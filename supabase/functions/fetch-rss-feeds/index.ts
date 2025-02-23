@@ -27,44 +27,102 @@ serve(async (req) => {
       fetchYouTubeVideos(since)
     ]);
 
-    const allItems = [...articles, ...podcasts, ...videos].map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      type: item.type,
-      image_url: item.imageUrl,
-      date: item.date,
-      link: item.link,
-      source_tag_id: item.tags[0]?.id,
-      source_tag_name: item.tags[0]?.name,
-    }));
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (updateDb && allItems.length > 0) {
-      console.log(`Found ${allItems.length} new items to update`);
+    if (updateDb) {
+      console.log(`Processing content items...`);
       
-      // Initialize Supabase client
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      for (const item of [...articles, ...podcasts, ...videos]) {
+        try {
+          // First insert the main content item
+          const { data: contentItem, error: contentError } = await supabase
+            .from('content_items')
+            .upsert({
+              title: item.title,
+              description: item.description,
+              content_type: item.type,
+              source_url: item.link,
+              published_at: new Date(item.date).toISOString(),
+            })
+            .select()
+            .single();
 
-      // Insert new items
-      const { error } = await supabase
-        .from('content_items')
-        .upsert(allItems, {
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
+          if (contentError) throw contentError;
+          if (!contentItem) throw new Error('Failed to insert content item');
 
-      if (error) {
-        console.error('Error upserting items:', error);
-        throw error;
+          // Then insert the type-specific content
+          if (item.type === 'article' && 'content' in item) {
+            await supabase
+              .from('articles')
+              .upsert({
+                content_id: contentItem.id,
+                content: item.content,
+                author: (item as any).author
+              });
+          } else if (item.type === 'video') {
+            await supabase
+              .from('videos')
+              .upsert({
+                content_id: contentItem.id,
+                video_url: item.link,
+                thumbnail_url: (item as any).thumbnailUrl,
+                duration: (item as any).duration
+              });
+          } else if (item.type === 'podcast') {
+            await supabase
+              .from('podcasts')
+              .upsert({
+                content_id: contentItem.id,
+                audio_url: item.link,
+                duration: (item as any).duration,
+                episode_number: (item as any).episodeNumber,
+                season_number: (item as any).seasonNumber
+              });
+          }
+
+          // Handle tags
+          if (item.tags && item.tags.length > 0) {
+            for (const tag of item.tags) {
+              // Insert or get tag
+              const { data: tagData, error: tagError } = await supabase
+                .from('tags')
+                .upsert({
+                  name: tag.name,
+                  type: tag.type
+                })
+                .select()
+                .single();
+
+              if (tagError) throw tagError;
+              if (!tagData) throw new Error('Failed to insert tag');
+
+              // Create content-tag association
+              await supabase
+                .from('content_tags')
+                .upsert({
+                  content_id: contentItem.id,
+                  tag_id: tagData.id
+                });
+            }
+          }
+
+          console.log(`Successfully processed item: ${item.title}`);
+        } catch (error) {
+          console.error(`Error processing item ${item.title}:`, error);
+          // Continue with next item
+          continue;
+        }
       }
-
-      console.log(`Successfully processed ${allItems.length} items`);
     }
 
     return new Response(
-      JSON.stringify({ success: true, itemsProcessed: allItems.length }),
+      JSON.stringify({ 
+        success: true, 
+        itemsProcessed: articles.length + podcasts.length + videos.length 
+      }),
       { 
         headers: {
           ...corsHeaders,
