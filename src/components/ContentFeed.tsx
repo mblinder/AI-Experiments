@@ -1,6 +1,6 @@
 
 import React, { useRef, useCallback } from 'react';
-import ContentCard from './ContentCard';
+import ContentCard from '@/components/ContentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 

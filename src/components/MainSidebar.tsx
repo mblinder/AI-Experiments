@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
-import { Home, Podcast, Video, Newspaper } from "lucide-react"
+import { Podcast, Video, Users, Globe, Settings } from "lucide-react"
 
 export function MainSidebar() {
   return (
@@ -19,11 +19,9 @@ export function MainSidebar() {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a href="/">
-                <Home className="h-4 w-4" />
-                <span>Home</span>
-              </a>
+            <SidebarMenuButton>
+              <Podcast className="h-4 w-4" />
+              <span>Podcasts</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -34,14 +32,20 @@ export function MainSidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton>
-              <Podcast className="h-4 w-4" />
-              <span>Podcasts</span>
+              <Users className="h-4 w-4" />
+              <span>Contributors</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton>
-              <Newspaper className="h-4 w-4" />
-              <span>Articles</span>
+              <Globe className="h-4 w-4" />
+              <span>Metaverse</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton>
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

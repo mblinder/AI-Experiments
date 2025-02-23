@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { MainSidebar } from '@/components/MainSidebar';
 import ContentFeed from '@/components/ContentFeed';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 // Temporary mock data - replace with actual API calls
@@ -32,52 +33,25 @@ const mockData = [
     imageUrl: 'https://picsum.photos/800/402',
     date: '2024-03-12',
     link: 'https://podcast.com',
-  },
-  {
-    id: '4',
-    title: 'Is Democracy in Danger?',
-    description: 'A critical look at the challenges facing democratic institutions around the world.',
-    type: 'youtube' as const,
-    imageUrl: 'https://picsum.photos/800/403',
-    date: '2024-03-11',
-    link: 'https://youtube.com',
-  },
-  {
-    id: '5',
-    title: 'The Conservative Case for Climate Action',
-    description: 'Why conservatives should lead the fight against climate change.',
-    type: 'substack' as const,
-    imageUrl: 'https://picsum.photos/800/404',
-    date: '2024-03-10',
-    link: 'https://substack.com',
-  },
-  {
-    id: '6',
-    title: 'The Bulwark Podcast: The Future of Conservatism',
-    description: 'A discussion on the future direction of the conservative movement.',
-    type: 'podcast' as const,
-    imageUrl: 'https://picsum.photos/800/405',
-    date: '2024-03-09',
-    link: 'https://podcast.com',
-  },
+  }
 ];
 
 const Index = () => {
-  const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState('all');
 
-  const { data, isLoading, hasNextPage, fetchNextPage } = useQuery({
-    queryKey: ['content', page],
-    queryFn: async () => {
+  const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery({
+    queryKey: ['content'],
+    queryFn: async ({ pageParam = 1 }) => {
       // This would be replaced with actual API calls to fetch content
-      return mockData;
+      return {
+        items: mockData,
+        nextPage: pageParam < 3 ? pageParam + 1 : undefined,
+      };
     },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
   });
 
-  const handleLoadMore = () => {
-    setPage(prev => prev + 1);
-    fetchNextPage();
-  };
+  const allItems = data?.pages.flatMap(page => page.items) || [];
 
   return (
     <SidebarProvider>
@@ -89,11 +63,11 @@ const Index = () => {
             <h1 className="text-2xl font-bold">The Bulwark</h1>
           </header>
           <ContentFeed 
-            items={data || []} 
+            items={allItems} 
             type={activeTab as 'all' | 'youtube' | 'substack' | 'podcast'}
             hasMore={!!hasNextPage}
             isLoading={isLoading}
-            onLoadMore={handleLoadMore}
+            onLoadMore={fetchNextPage}
           />
         </main>
       </div>
