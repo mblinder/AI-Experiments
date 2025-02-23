@@ -104,6 +104,24 @@ export type Database = {
           },
         ]
       }
+      global_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       people: {
         Row: {
           avatar_url: string | null

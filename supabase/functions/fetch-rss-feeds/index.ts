@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { fetchArticles } from './articleService.ts';
 import { fetchPodcasts } from './podcastService.ts';
@@ -19,18 +18,28 @@ serve(async (req) => {
     console.log('Starting to fetch all content...');
     
     // Parse request body
-    const { updateDb = false, since = null } = await req.json();
+    const { updateDb = false } = await req.json();
     
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get the last fetch timestamp from global config
+    const { data: configData } = await supabase
+      .from('global_config')
+      .select('value')
+      .eq('key', 'last_feed_fetch')
+      .single();
+
+    const since = configData?.value?.timestamp || null;
+    console.log('Last fetch timestamp:', since);
+
     const [articles, podcasts, videos] = await Promise.all([
       fetchArticles(since),
       fetchPodcasts(since),
       fetchYouTubeVideos(since)
     ]);
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     let processedItems = 0;
 
@@ -155,6 +164,19 @@ serve(async (req) => {
           console.error(`Error processing item ${item.title}:`, error);
           continue;
         }
+      }
+
+      // Update the last fetch timestamp
+      const { error: updateError } = await supabase
+        .from('global_config')
+        .update({ 
+          value: { timestamp: new Date().toISOString() },
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', 'last_feed_fetch');
+
+      if (updateError) {
+        console.error('Error updating last fetch timestamp:', updateError);
       }
     }
 

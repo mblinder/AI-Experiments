@@ -27,10 +27,10 @@ interface PagedResponse {
 type ContentType = Database['public']['Enums']['content_type'];
 
 export async function refreshFeeds() {
+  // Call the edge function without a since parameter - it will use the global config
   const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
     body: { 
-      updateDb: true,
-      since: null  // Reset the since parameter to fetch all content
+      updateDb: true
     }
   });
   
@@ -84,15 +84,15 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
     }
 
     const transformedItems: ContentItem[] = items.map(item => ({
-      id: String(item.id), // Convert number to string
+      id: String(item.id),
       title: item.title,
       description: item.description || '',
-      type: item.content_type as ContentItem['type'], // Explicitly type as allowed content type
+      type: item.content_type as ContentItem['type'],
       imageUrl: item.videos?.[0]?.thumbnail_url || undefined,
       date: item.published_at,
       link: item.source_url,
       tags: item.content_tags?.map((tag: any) => ({
-        id: String(tag.tags.id), // Convert number to string
+        id: String(tag.tags.id),
         name: tag.tags.name,
         type: tag.tags.type
       })) || []
@@ -100,7 +100,7 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
 
     return {
       items: transformedItems,
-      nextPage: null // We're not implementing pagination in this version
+      nextPage: null
     };
   } catch (error) {
     console.error('Error in fetchContent:', error);
