@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ARTICLES_FEED_URL = 'https://www.thebulwark.com/s/thetriad';
+const ARTICLES_FEED_URL = 'http://thetriad.substack.com/feed';
 const PODCAST_FEED_URL = 'https://feeds.megaphone.fm/TPW1449071235';
 
 // Bulwark Media channel ID
