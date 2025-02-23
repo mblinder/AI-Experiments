@@ -2,7 +2,8 @@
 import React, { useRef, useCallback } from 'react';
 import ContentCard from '@/components/ContentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Virtuoso } from 'react-virtuoso';
 import type { ContentTag } from '@/services/contentService';
 
 interface ContentItem {
@@ -35,20 +36,6 @@ const ContentFeed = ({
   onTagClick,
   activeTag
 }: ContentFeedProps) => {
-  const observer = useRef<IntersectionObserver>();
-  const lastItemRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading) return;
-    if (observer.current) observer.current.disconnect();
-
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        onLoadMore();
-      }
-    });
-
-    if (node) observer.current.observe(node);
-  }, [isLoading, hasMore, onLoadMore]);
-
   const filteredItems = type === 'all' 
     ? items 
     : items.filter(item => item.type === type);
@@ -63,25 +50,41 @@ const ContentFeed = ({
     </div>
   );
 
+  const ItemRenderer = ({ item, index }: { item: ContentItem; index: number }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.1, 0.3) }}
+      className="p-3"
+    >
+      <ContentCard 
+        {...item} 
+        onTagClick={onTagClick}
+        activeTag={activeTag}
+      />
+    </motion.div>
+  );
+
   return (
     <ScrollArea className="h-[calc(100vh-4rem)]">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-        {filteredItems.map((item, index) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
-            ref={index === filteredItems.length - 1 ? lastItemRef : null}
-          >
-            <ContentCard 
-              {...item} 
-              onTagClick={onTagClick}
-              activeTag={activeTag}
-            />
-          </motion.div>
-        ))}
-        {(isLoading && hasMore) && <LoadingSpinner />}
+        <Virtuoso
+          style={{ height: 'calc(100vh - 4rem)' }}
+          totalCount={filteredItems.length}
+          itemContent={index => (
+            <ItemRenderer item={filteredItems[index]} index={index} />
+          )}
+          endReached={() => {
+            if (hasMore && !isLoading) {
+              onLoadMore();
+            }
+          }}
+          components={{
+            Footer: () => 
+              isLoading && hasMore ? <LoadingSpinner /> : null
+          }}
+          overscan={5}
+        />
       </div>
     </ScrollArea>
   );

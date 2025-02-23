@@ -28,24 +28,31 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Reduce initial page size for faster first load
+const INITIAL_PAGE_SIZE = 10;
+const SUBSEQUENT_PAGE_SIZE = 10;
+
 export async function fetchContent(page: number, contentType?: string): Promise<PagedResponse> {
   try {
-    const initialPageSize = 25;
-    const subsequentPageSize = 10;
-    const itemsPerPage = page === 1 ? initialPageSize : subsequentPageSize;
-    const start = page === 1 ? 0 : initialPageSize + ((page - 2) * subsequentPageSize);
+    const itemsPerPage = page === 1 ? INITIAL_PAGE_SIZE : SUBSEQUENT_PAGE_SIZE;
+    const start = page === 1 ? 0 : INITIAL_PAGE_SIZE + ((page - 2) * SUBSEQUENT_PAGE_SIZE);
     const end = start + itemsPerPage - 1;
 
-    // First, trigger the feed fetch function to update the database
-    await supabase.functions.invoke('fetch-rss-feeds', {
+    // Prefetch RSS feeds in background without waiting
+    supabase.functions.invoke('fetch-rss-feeds', {
       body: { updateDb: true },
-    });
+    }).catch(console.error); // Handle error silently to not block the main content load
 
-    // Build the query with date as the primary sort criterion
     let query = supabase
       .from('content_items')
       .select(`
-        *,
+        id,
+        title,
+        description,
+        type,
+        image_url,
+        date,
+        link,
         content_item_tags:content_item_tags (
           content_tags (
             id,
@@ -54,15 +61,13 @@ export async function fetchContent(page: number, contentType?: string): Promise<
           )
         )
       `, { count: 'exact' })
-      .order('date', { ascending: false }) // Primary sort by date
-      .order('id', { ascending: false }); // Secondary sort by ID to ensure consistent ordering
+      .order('date', { ascending: false })
+      .order('id', { ascending: false });
 
-    // Add content type filter if specified
     if (contentType && contentType !== 'all') {
       query = query.eq('type', contentType);
     }
 
-    // Add pagination
     query = query.range(start, end);
 
     const { data: items, error, count } = await query;
@@ -72,7 +77,6 @@ export async function fetchContent(page: number, contentType?: string): Promise<
       throw error;
     }
 
-    // Transform the data to match the ContentItem interface
     const transformedItems: ContentItem[] = items.map(item => {
       const tags: ContentTag[] = item.content_item_tags?.map((tag: any) => ({
         id: tag.content_tags.id,
@@ -84,7 +88,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
         tags.push({
           id: item.source_tag_id,
           name: item.source_tag_name,
-          type: 'source' as const
+          type: 'source'
         });
       }
 
