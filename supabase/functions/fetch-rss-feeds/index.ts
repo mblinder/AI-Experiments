@@ -12,13 +12,11 @@ const PODCAST_FEEDS = [
   'https://api.substack.com/feed/podcast/87281/s/87961/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss'
 ];
 
-const VIDEO_FEEDS = [
-  'https://www.youtube.com/@bulwarkmedia/videos',
-  'https://www.youtube.com/@bulwarkmedia/shorts'
-];
+// Bulwark Media channel ID
+const YOUTUBE_CHANNEL_ID = 'UCd5BNKWR5p6p7ZN6_gt3WZQ';
+const YOUTUBE_RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -27,69 +25,98 @@ serve(async (req) => {
     const { page = 1 } = await req.json();
     console.log('Fetching content for page:', page);
 
+    // Configure XML parser with options for handling CDATA and attributes
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: '@_',
+      parseAttributeValue: true,
+      parseTagValue: true,
+      trimValues: true,
+      parseTrueNumberOnly: true,
+      cdataTagName: '__cdata',
+      cdataPositionChar: '\\c'
+    });
+
     // Fetch and parse podcast feeds
     const podcastPromises = PODCAST_FEEDS.map(async (feedUrl) => {
       try {
+        console.log(`Fetching podcast feed: ${feedUrl}`);
         const response = await fetch(feedUrl);
+        if (!response.ok) {
+          console.error(`Failed to fetch podcast feed ${feedUrl}: ${response.status}`);
+          return [];
+        }
         const xmlData = await response.text();
-        const parser = new XMLParser();
         const result = parser.parse(xmlData);
-        return result.rss.channel.item || [];
+        console.log('Podcast feed parsed:', result?.rss?.channel?.title);
+        return result?.rss?.channel?.item || [];
       } catch (error) {
         console.error(`Error fetching podcast feed ${feedUrl}:`, error);
         return [];
       }
     });
 
-    // Fetch and parse video feeds (YouTube)
-    const videoPromises = VIDEO_FEEDS.map(async (feedUrl) => {
+    // Fetch and parse YouTube feed
+    const fetchYouTubeVideos = async () => {
       try {
-        // Note: YouTube RSS feed URLs need to be modified to get the actual RSS feed
-        const rssUrl = feedUrl.replace('www.youtube.com/@', 'www.youtube.com/feeds/videos.xml?channel_id=');
-        const response = await fetch(rssUrl);
+        console.log('Fetching YouTube feed:', YOUTUBE_RSS_URL);
+        const response = await fetch(YOUTUBE_RSS_URL);
+        if (!response.ok) {
+          console.error(`Failed to fetch YouTube feed: ${response.status}`);
+          return [];
+        }
         const xmlData = await response.text();
-        const parser = new XMLParser();
         const result = parser.parse(xmlData);
-        return result.feed.entry || [];
+        console.log('YouTube feed parsed:', result?.feed?.title);
+        return result?.feed?.entry || [];
       } catch (error) {
-        console.error(`Error fetching video feed ${feedUrl}:`, error);
+        console.error('Error fetching YouTube feed:', error);
         return [];
       }
-    });
+    };
 
     // Wait for all feeds to be fetched
     const [podcastResults, videoResults] = await Promise.all([
       Promise.all(podcastPromises),
-      Promise.all(videoPromises)
+      fetchYouTubeVideos()
     ]);
 
-    // Combine and format all items
-    const allPodcasts = podcastResults.flat().map(item => ({
-      id: item.guid || item.link,
-      title: item.title,
-      description: item.description || '',
-      type: 'podcast',
-      imageUrl: item.image?.url || item['itunes:image']?.['@_href'],
-      date: item.pubDate || new Date().toISOString(),
-      link: item.link,
-      tags: [{ id: 'source-podcast', name: 'Podcast', type: 'source' }]
-    }));
+    // Process podcast items
+    const allPodcasts = podcastResults.flat().map(item => {
+      console.log('Processing podcast item:', item.title);
+      return {
+        id: item.guid || item.link,
+        title: item.title,
+        description: item.description?.toString() || '',
+        type: 'podcast',
+        imageUrl: item['itunes:image']?.['@_href'] || item.image?.url,
+        date: item.pubDate || new Date().toISOString(),
+        link: item.link,
+        tags: [{ id: 'source-podcast', name: 'Podcast', type: 'source' }]
+      };
+    });
 
-    const allVideos = videoResults.flat().map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description || '',
-      type: 'video',
-      imageUrl: item.thumbnail?.url,
-      date: item.published,
-      link: item.link,
-      tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
-    }));
+    // Process YouTube items
+    const allVideos = (Array.isArray(videoResults) ? videoResults : []).map(item => {
+      console.log('Processing video item:', item.title);
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.summary?.__cdata || item.summary || '',
+        type: 'video',
+        imageUrl: item['media:group']?.['media:thumbnail']?.['@_url'] || '',
+        date: item.published,
+        link: item.link?.['@_href'] || item.link,
+        tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
+      };
+    });
 
-    // Combine all items and sort by date
+    // Combine and sort all items
     const allItems = [...allPodcasts, ...allVideos].sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
+
+    console.log(`Total items found: ${allItems.length} (${allPodcasts.length} podcasts, ${allVideos.length} videos)`);
 
     // Implement pagination
     const itemsPerPage = 10;
@@ -102,7 +129,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         items: paginatedItems,
-        nextPage: hasMorePages ? page + 1 : null
+        nextPage: hasMorePages ? page + 1 : null,
+        total: allItems.length
       }),
       { 
         headers: {
@@ -114,7 +142,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing request:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: error.message 
+      }),
       { 
         status: 500,
         headers: {
