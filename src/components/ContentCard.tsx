@@ -60,10 +60,19 @@ const ContentCard = ({
     }
     // Handle Apple Podcasts URLs
     if (url.includes('podcasts.apple.com')) {
-      // Extract the episode ID from the URL
-      const episodeId = url.split('=').pop();
-      // Return an embeddable player URL
-      return `https://embed.podcasts.apple.com/us/podcast/id1796712102?i=${episodeId}`;
+      // Extract the show ID and episode ID from the URL
+      const showIdMatch = url.match(/\/id(\d+)/);
+      const episodeIdMatch = url.match(/\?i=(\d+)/);
+      
+      if (showIdMatch && episodeIdMatch) {
+        const showId = showIdMatch[1];
+        const episodeId = episodeIdMatch[1];
+        return `https://embed.podcasts.apple.com/us/podcast/id${showId}?i=${episodeId}`;
+      } else if (showIdMatch) {
+        // If it's just a show URL without an episode ID
+        const showId = showIdMatch[1];
+        return `https://embed.podcasts.apple.com/us/podcast/id${showId}`;
+      }
     }
     return url;
   };
