@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { XMLParser } from 'npm:fast-xml-parser';
 
@@ -12,9 +11,9 @@ const PODCAST_FEEDS = [
   'https://api.substack.com/feed/podcast/87281/s/87961/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss'
 ];
 
-// Bulwark Media channel
-const YOUTUBE_CHANNEL = '@bulwarkmedia';
-const YOUTUBE_RSS_URL = `https://www.youtube.com/feeds/videos.xml?user=${YOUTUBE_CHANNEL}`;
+// Bulwark Media channel ID
+const YOUTUBE_CHANNEL_ID = 'UCG4Hp1KbGw4e02N7FpPXDgQ';
+const YOUTUBE_RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
