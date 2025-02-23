@@ -1,3 +1,4 @@
+
 import { XMLParser } from 'fast-xml-parser';
 import { createClient } from '@supabase/supabase-js';
 
@@ -23,13 +24,25 @@ interface PagedResponse {
   nextPage: number | null;
 }
 
-// Initialize Supabase client
+// Initialize Supabase client with fallback to mock data if env vars aren't set
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabase: ReturnType<typeof createClient> | null = null;
+
+if (supabaseUrl && supabaseAnonKey) {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+}
 
 export async function fetchContent(page: number): Promise<PagedResponse> {
+  if (!supabase) {
+    console.warn('Supabase client not initialized. Using mock data.');
+    return {
+      items: MOCK_PODCASTS,
+      nextPage: null
+    };
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
       body: { page },
