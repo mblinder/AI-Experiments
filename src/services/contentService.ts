@@ -125,3 +125,11 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
     throw error;
   }
 }
+
+// Expose functions for testing
+if (typeof window !== 'undefined') {
+  (window as any).contentService = {
+    refreshFeeds,
+    fetchContent
+  };
+}
