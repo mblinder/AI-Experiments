@@ -18,54 +18,45 @@ export interface ContentItem {
   tags: ContentTag[];
 }
 
-const PODCAST_FEEDS = [
-  'https://api.substack.com/feed/podcast/87281/s/87957/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss',
-  'https://api.substack.com/feed/podcast/87281/s/87961/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss'
-];
-
-const parser = new XMLParser();
-
-async function fetchPodcastContent(): Promise<ContentItem[]> {
-  const podcastItems: ContentItem[] = [];
-  
-  for (const feed of PODCAST_FEEDS) {
-    try {
-      const response = await fetch(feed);
-      const xml = await response.text();
-      const result = parser.parse(xml);
-      
-      const channel = result.rss.channel;
-      const items = Array.isArray(channel.item) ? channel.item : [channel.item];
-      
-      items.forEach((item: any) => {
-        podcastItems.push({
-          id: item.guid,
-          title: item.title,
-          description: item.description,
-          type: 'podcast',
-          imageUrl: channel.image?.url,
-          date: new Date(item.pubDate).toISOString(),
-          link: item.link,
-          tags: [
-            {
-              id: `source-${channel.title}`,
-              name: channel.title,
-              type: 'source'
-            }
-          ]
-        });
-      });
-    } catch (error) {
-      console.error('Error fetching podcast feed:', error);
-    }
-  }
-  
-  return podcastItems;
+interface PagedResponse {
+  items: ContentItem[];
+  nextPage: number | null;
 }
 
-export async function fetchContent(page: number = 1): Promise<ContentItem[]> {
-  // For now, we'll just implement podcast fetching
-  // YouTube integration will need to be added later as it requires API keys
-  const podcastContent = await fetchPodcastContent();
-  return podcastContent;
+// For development, we'll use mock data until we set up a proper backend proxy
+// to handle the CORS issues with the RSS feeds
+const MOCK_PODCASTS: ContentItem[] = [
+  {
+    id: '1',
+    title: 'How to Fix It with John Avalon',
+    description: 'John Avalon discusses solutions to today\'s biggest challenges',
+    type: 'podcast',
+    imageUrl: 'https://www.thebulwark.com/wp-content/uploads/2024/02/how-to-fix-it.jpg',
+    date: new Date().toISOString(),
+    link: 'https://www.thebulwark.com/s/how-to-fix-it-with-john-avalon',
+    tags: [
+      {
+        id: 'source-fix-it',
+        name: 'How to Fix It',
+        type: 'source'
+      },
+      {
+        id: 'participant-john-avalon',
+        name: 'John Avalon',
+        type: 'participant'
+      }
+    ]
+  }
+];
+
+export async function fetchContent(page: number): Promise<PagedResponse> {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // For now, return mock data
+  // In production, this would fetch from the RSS feeds via a backend proxy
+  return {
+    items: MOCK_PODCASTS,
+    nextPage: null // No more pages in our mock data
+  };
 }

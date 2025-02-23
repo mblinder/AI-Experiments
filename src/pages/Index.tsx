@@ -19,10 +19,10 @@ const Index = () => {
   const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData>({
     queryKey: ['content'],
     queryFn: async ({ pageParam = 1 }) => {
-      const items = await fetchContent(pageParam);
+      const response = await fetchContent(pageParam as number);
       return {
-        items,
-        nextPage: items.length > 0 ? pageParam + 1 : null,
+        items: response.items,
+        nextPage: response.nextPage,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
