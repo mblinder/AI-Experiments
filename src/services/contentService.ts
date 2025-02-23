@@ -54,7 +54,8 @@ export async function fetchContent(page: number, contentType?: string): Promise<
           )
         )
       `, { count: 'exact' })
-      .order('date', { ascending: false });
+      .order('date', { ascending: false }) // This ensures newest items appear first
+      .order('created_at', { ascending: false }); // Secondary sort by created_at
 
     // Add content type filter if specified
     if (contentType && contentType !== 'all') {
