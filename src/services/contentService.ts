@@ -46,6 +46,32 @@ const MOCK_PODCASTS: ContentItem[] = [
         type: 'participant'
       }
     ]
+  },
+  {
+    id: '2',
+    title: 'The Focus Group: Understanding American Politics',
+    description: 'Sarah Longwell and a panel of voters discuss their views on current political events and what shapes their decision-making.',
+    type: 'podcast',
+    imageUrl: 'https://www.thebulwark.com/wp-content/uploads/2023/06/focus-group.jpg',
+    date: new Date().toISOString(),
+    link: 'https://www.thebulwark.com/s/fypod',
+    tags: [
+      {
+        id: 'source-focus-group',
+        name: 'The Focus Group',
+        type: 'source'
+      },
+      {
+        id: 'participant-sarah-longwell',
+        name: 'Sarah Longwell',
+        type: 'participant'
+      },
+      {
+        id: 'topic-politics',
+        name: 'Politics',
+        type: 'topic'
+      }
+    ]
   }
 ];
 
