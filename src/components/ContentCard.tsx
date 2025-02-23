@@ -58,6 +58,13 @@ const ContentCard = ({
       const episodeId = url.split('/').pop();
       return `https://player.megaphone.fm/${episodeId}`;
     }
+    // Handle Apple Podcasts URLs
+    if (url.includes('podcasts.apple.com')) {
+      // Extract the episode ID from the URL
+      const episodeId = url.split('=').pop();
+      // Return an embeddable player URL
+      return `https://embed.podcasts.apple.com/us/podcast/id1796712102?i=${episodeId}`;
+    }
     return url;
   };
 
@@ -112,14 +119,31 @@ const ContentCard = ({
         >
           {isPlaying ? (
             <div className="absolute inset-0">
-              <ReactPlayer
-                url={mediaUrl}
-                width="100%"
-                height="100%"
-                controls={true}
-                playing={isPlaying}
-                config={playerConfig}
-              />
+              {link.includes('podcasts.apple.com') ? (
+                <iframe
+                  src={mediaUrl}
+                  height="175px"
+                  frameBorder="0"
+                  sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                  allow="autoplay *; encrypted-media *; fullscreen *"
+                  style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    borderRadius: '10px',
+                    backgroundColor: 'transparent'
+                  }}
+                />
+              ) : (
+                <ReactPlayer
+                  url={mediaUrl}
+                  width="100%"
+                  height="100%"
+                  controls={true}
+                  playing={isPlaying}
+                  config={playerConfig}
+                />
+              )}
             </div>
           ) : (
             <div className="relative w-full h-full">
