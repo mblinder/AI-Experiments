@@ -31,6 +31,48 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Reduce initial page size for faster first load
 const INITIAL_PAGE_SIZE = 10;
 const SUBSEQUENT_PAGE_SIZE = 10;
+const UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+let lastUpdateTime = 0;
+
+async function checkForNewContent() {
+  const now = Date.now();
+  // Only check for new content every 5 minutes
+  if (now - lastUpdateTime < UPDATE_INTERVAL) {
+    return;
+  }
+
+  try {
+    // Get the most recent item's date
+    const { data: latestItem } = await supabase
+      .from('content_items')
+      .select('date')
+      .order('date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (latestItem) {
+      // Trigger background update if we have items
+      console.log('Checking for new content since:', new Date(latestItem.date).toISOString());
+      supabase.functions.invoke('fetch-rss-feeds', {
+        body: { 
+          updateDb: true,
+          since: latestItem.date 
+        },
+      }).catch(console.error);
+    } else {
+      // If no items exist, do a full fetch
+      console.log('No existing content, performing full fetch');
+      supabase.functions.invoke('fetch-rss-feeds', {
+        body: { updateDb: true },
+      }).catch(console.error);
+    }
+    
+    lastUpdateTime = now;
+  } catch (error) {
+    console.error('Error checking for new content:', error);
+  }
+}
 
 export async function fetchContent(page: number, contentType?: string): Promise<PagedResponse> {
   try {
@@ -38,10 +80,10 @@ export async function fetchContent(page: number, contentType?: string): Promise<
     const start = page === 1 ? 0 : INITIAL_PAGE_SIZE + ((page - 2) * SUBSEQUENT_PAGE_SIZE);
     const end = start + itemsPerPage - 1;
 
-    // Prefetch RSS feeds in background without waiting
-    supabase.functions.invoke('fetch-rss-feeds', {
-      body: { updateDb: true },
-    }).catch(console.error); // Handle error silently to not block the main content load
+    // Only check for updates on first page load
+    if (page === 1) {
+      await checkForNewContent();
+    }
 
     let query = supabase
       .from('content_items')

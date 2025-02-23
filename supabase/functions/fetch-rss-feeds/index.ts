@@ -17,10 +17,14 @@ serve(async (req) => {
 
   try {
     console.log('Starting to fetch all content...');
+    
+    // Parse request body
+    const { updateDb = false, since = null } = await req.json();
+    
     const [articles, podcasts, videos] = await Promise.all([
-      fetchArticles(),
-      fetchPodcasts(),
-      fetchYouTubeVideos()
+      fetchArticles(since),
+      fetchPodcasts(since),
+      fetchYouTubeVideos(since)
     ]);
 
     const allItems = [...articles, ...podcasts, ...videos].map(item => ({
@@ -35,25 +39,29 @@ serve(async (req) => {
       source_tag_name: item.tags[0]?.name,
     }));
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (updateDb && allItems.length > 0) {
+      console.log(`Found ${allItems.length} new items to update`);
+      
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Upsert all items into the database
-    const { error } = await supabase
-      .from('content_items')
-      .upsert(allItems, {
-        onConflict: 'id',
-        ignoreDuplicates: false
-      });
+      // Insert new items
+      const { error } = await supabase
+        .from('content_items')
+        .upsert(allItems, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
 
-    if (error) {
-      console.error('Error upserting items:', error);
-      throw error;
+      if (error) {
+        console.error('Error upserting items:', error);
+        throw error;
+      }
+
+      console.log(`Successfully processed ${allItems.length} items`);
     }
-
-    console.log(`Successfully processed ${allItems.length} items`);
 
     return new Response(
       JSON.stringify({ success: true, itemsProcessed: allItems.length }),
