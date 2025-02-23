@@ -41,26 +41,31 @@ async function checkForNewContent() {
   }
 
   try {
-    const { data: latestItem } = await supabase
+    const { data: latestItem, error: latestError } = await supabase
       .from('content_items')
       .select('date')
       .order('date', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (latestError) {
+      console.error('Error fetching latest content:', latestError);
+      return;
+    }
 
     if (latestItem) {
       console.log('Checking for new content since:', new Date(latestItem.date).toISOString());
-      supabase.functions.invoke('fetch-rss-feeds', {
+      await supabase.functions.invoke('fetch-rss-feeds', {
         body: { 
           updateDb: true,
           since: latestItem.date 
         },
-      }).catch(console.error);
+      });
     } else {
       console.log('No existing content, performing full fetch');
-      supabase.functions.invoke('fetch-rss-feeds', {
+      await supabase.functions.invoke('fetch-rss-feeds', {
         body: { updateDb: true },
-      }).catch(console.error);
+      });
     }
     
     lastUpdateTime = now;
@@ -82,30 +87,19 @@ export async function fetchContent(page: number, contentType?: string): Promise<
     let query = supabase
       .from('content_items')
       .select(`
-        id,
-        title,
-        description,
-        type,
-        image_url,
-        date,
-        link,
+        *,
         content_item_tags!inner (
-          content_tags (
-            id,
-            name,
-            type
-          )
+          content_tags (*)
         )
-      `, { count: 'exact' })
+      `)
       .order('date', { ascending: false });
 
     if (contentType && contentType !== 'all') {
       query = query.eq('type', contentType);
     }
 
-    query = query.range(start, end);
-
-    const { data: items, error, count } = await query;
+    const { data: items, error, count } = await query
+      .range(start, end);
 
     if (error) {
       console.error('Error fetching content:', error);
@@ -122,7 +116,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
         .filter(Boolean) || [];
 
       return {
-        id: item.id,
+        id: item.id.toString(),
         title: item.title,
         description: item.description || '',
         type: item.type,
@@ -133,9 +127,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
       };
     }) || [];
 
-    const totalItems = count || 0;
-    const currentPosition = start + (transformedItems?.length || 0);
-    const hasMore = currentPosition < totalItems;
+    const hasMore = items && items.length === itemsPerPage;
 
     return {
       items: transformedItems,
