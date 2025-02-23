@@ -25,8 +25,10 @@ interface ContentCardProps {
 }
 
 const stripHtmlTags = (html: string) => {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  return doc.body.textContent || "";
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 };
 
 const ContentCard = ({ 
@@ -35,16 +37,21 @@ const ContentCard = ({
   description, 
   type, 
   imageUrl, 
-  date, 
+  date,
+  link,
   tags,
   onTagClick,
   activeTag
 }: ContentCardProps) => {
-  const cleanDescription = stripHtmlTags(description);
+  // Clean and truncate the description
+  const cleanDescription = React.useMemo(() => {
+    const stripped = stripHtmlTags(description);
+    return stripped;
+  }, [description]);
 
   return (
     <motion.div whileHover={{ scale: 1.02 }} className="w-full">
-      <Link to={`/content/${id}`}>
+      <a href={link} target="_blank" rel="noopener noreferrer">
         <Card className="overflow-hidden backdrop-blur-lg bg-white/90 dark:bg-black/90 border border-gray-200/50 dark:border-gray-800/50 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300">
           <div className="relative">
             {imageUrl && (
@@ -65,7 +72,7 @@ const ContentCard = ({
           </div>
           <div className="p-4">
             <h3 className="text-lg font-semibold mb-2 line-clamp-2">{title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-4">
               {cleanDescription}
             </p>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -92,7 +99,7 @@ const ContentCard = ({
             </time>
           </div>
         </Card>
-      </Link>
+      </a>
     </motion.div>
   );
 };

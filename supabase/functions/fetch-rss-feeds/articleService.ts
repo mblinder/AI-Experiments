@@ -24,13 +24,20 @@ export async function fetchArticles(): Promise<ContentItem[]> {
           
           const items = result?.rss?.channel?.item || [];
           return items.map(item => {
-            // Extract full content from either 'content:encoded' or 'description'
-            const content = item['content:encoded'] || item.description;
+            // First try to get content from content:encoded, then description
+            let content = '';
+            if (item['content:encoded']) {
+              content = item['content:encoded'].toString();
+            } else if (item.description) {
+              content = item.description.toString();
+            }
+            
+            console.log('Content length for article:', content.length);
             
             return {
               id: item.guid || item.link,
               title: item.title,
-              description: content?.toString() || '',
+              description: content,
               type: 'article',
               imageUrl: item.enclosure?.['@_url'] || 
                        item['media:content']?.['@_url'] || 
