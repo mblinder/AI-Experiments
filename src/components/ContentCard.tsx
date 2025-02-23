@@ -66,21 +66,34 @@ const ContentCard = ({
     }
 
     if (type === 'video' || type === 'podcast') {
+      const playerConfig = {
+        youtube: {
+          playerVars: { origin: window.location.origin }
+        },
+        soundcloud: {
+          options: {
+            sharing: false,
+            download: false
+          }
+        },
+        file: {
+          forceAudio: type === 'podcast'
+        }
+      };
+
       return (
-        <div className="aspect-video w-full" onClick={handleMediaClick}>
+        <div className={`${type === 'video' ? 'aspect-video' : 'h-[200px]'} w-full relative`} onClick={handleMediaClick}>
           {isPlaying ? (
-            <ReactPlayer
-              url={link}
-              width="100%"
-              height="100%"
-              controls={true}
-              playing={isPlaying}
-              config={{
-                youtube: {
-                  playerVars: { origin: window.location.origin }
-                }
-              }}
-            />
+            <div className="absolute inset-0">
+              <ReactPlayer
+                url={link}
+                width="100%"
+                height="100%"
+                controls={true}
+                playing={isPlaying}
+                config={playerConfig}
+              />
+            </div>
           ) : (
             <div className="relative w-full h-full">
               {imageUrl && (
