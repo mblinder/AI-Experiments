@@ -10,14 +10,45 @@ import { fetchContent } from '@/services/contentService';
 
 const ContentDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const decodedId = id ? decodeURIComponent(id) : '';
+  
+  // Add better ID parsing logic
+  const parseContentId = (encodedId: string | undefined): string => {
+    if (!encodedId) return '';
+    
+    try {
+      // First, URL decode the string
+      const decoded = decodeURIComponent(encodedId);
+      
+      // Check if it's a JSON string
+      if (decoded.startsWith('{')) {
+        const parsed = JSON.parse(decoded);
+        // If it's the old format with #text, extract the last part of the URL
+        if (parsed['#text']) {
+          const url = parsed['#text'];
+          return url.split('/').pop() || '';
+        }
+      }
+      
+      // If not JSON or doesn't match old format, return as is
+      return decoded;
+    } catch (e) {
+      console.error('Error parsing content ID:', e);
+      return encodedId;
+    }
+  };
+
+  const decodedId = parseContentId(id);
+  console.log('Parsed content ID:', { original: id, decoded: decodedId });
 
   const { data: contentData, isLoading } = useQuery({
     queryKey: ['content', decodedId],
     queryFn: async () => {
       const response = await fetchContent(1); // Fetch first page
       const item = response.items.find(item => item.id === decodedId);
-      if (!item) throw new Error('Content not found');
+      if (!item) {
+        console.error('Content not found for ID:', { decodedId, originalId: id });
+        throw new Error('Content not found');
+      }
       return item;
     },
     enabled: !!decodedId
@@ -35,6 +66,9 @@ const ContentDetails = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-bold">Content not found</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          The requested content could not be found.
+        </p>
         <Link to="/">
           <Button>
             <ArrowLeft className="mr-2 h-4 w-4" />
