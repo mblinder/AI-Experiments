@@ -58,7 +58,17 @@ serve(async (req) => {
         
         const result = parser.parse(xmlData);
         console.log('Podcast feed parsed:', result?.rss?.channel?.title);
-        return result?.rss?.channel?.item || [];
+        const items = result?.rss?.channel?.item || [];
+        return items.map(item => ({
+          id: item.guid || item.link,
+          title: item.title,
+          description: item.description?.toString() || '',
+          type: 'podcast',
+          imageUrl: item['itunes:image']?.['@_href'] || item.image?.url,
+          date: item.pubDate || new Date().toISOString(),
+          link: item.link,
+          tags: [{ id: 'source-podcast', name: 'Podcast', type: 'source' }]
+        }));
       } catch (error) {
         console.error(`Error fetching podcast feed ${feedUrl}:`, error);
         return [];
@@ -72,7 +82,6 @@ serve(async (req) => {
         console.log('YouTube feed URL:', YOUTUBE_RSS_URL);
         const response = await fetch(YOUTUBE_RSS_URL);
         console.log('YouTube response status:', response.status);
-        console.log('YouTube response URL:', response.url);
         
         if (!response.ok) {
           console.error(`Failed to fetch YouTube feed: ${response.status}`);
@@ -80,17 +89,22 @@ serve(async (req) => {
         }
         
         const xmlData = await response.text();
-        console.log('YouTube XML data length:', xmlData.length);
-        console.log('First 200 chars of YouTube data:', xmlData.substring(0, 200));
+        console.log('YouTube data length:', xmlData.length);
         
         const result = parser.parse(xmlData);
-        console.log('YouTube feed entries count:', result?.feed?.entry?.length || 0);
-        console.log('First YouTube entry:', result?.feed?.entry?.[0]?.title || 'No entries');
-        
-        return result?.feed?.entry || [];
+        const entries = result?.feed?.entry || [];
+        return entries.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.summary?.__cdata || item.summary || '',
+          type: 'video',
+          imageUrl: item['media:group']?.['media:thumbnail']?.['@_url'] || item['media:thumbnail']?.['@_url'] || '',
+          date: item.published,
+          link: item.link?.['@_href'] || item.link,
+          tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
+        }));
       } catch (error) {
         console.error('Error fetching YouTube feed:', error);
-        console.error('Error details:', error.stack);
         return [];
       }
     };
@@ -104,35 +118,13 @@ serve(async (req) => {
 
     // Process podcast items
     console.log('Processing podcast items...');
-    const allPodcasts = podcastResults.flat().map(item => {
-      console.log('Processing podcast item:', item.title);
-      return {
-        id: item.guid || item.link,
-        title: item.title,
-        description: item.description?.toString() || '',
-        type: 'podcast',
-        imageUrl: item['itunes:image']?.['@_href'] || item.image?.url,
-        date: item.pubDate || new Date().toISOString(),
-        link: item.link,
-        tags: [{ id: 'source-podcast', name: 'Podcast', type: 'source' }]
-      };
-    });
+    const allPodcasts = podcastResults.flat();
+    console.log('Number of podcasts:', allPodcasts.length);
 
     // Process YouTube items
     console.log('Processing YouTube items...');
-    const allVideos = (Array.isArray(videoResults) ? videoResults : []).map(item => {
-      console.log('Processing video item:', item.title);
-      return {
-        id: item.id,
-        title: item.title,
-        description: item.summary?.__cdata || item.summary || '',
-        type: 'video',
-        imageUrl: item['media:group']?.['media:thumbnail']?.['@_url'] || item['media:thumbnail']?.['@_url'] || '',
-        date: item.published,
-        link: item.link?.['@_href'] || item.link,
-        tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
-      };
-    });
+    const allVideos = videoResults || [];
+    console.log('Number of videos:', allVideos.length);
 
     // Combine and sort all items
     const allItems = [...allPodcasts, ...allVideos].sort((a, b) => 
