@@ -41,7 +41,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
       body: { updateDb: true },
     });
 
-    // Build the query
+    // Build the query with date as the primary sort criterion
     let query = supabase
       .from('content_items')
       .select(`
@@ -54,8 +54,8 @@ export async function fetchContent(page: number, contentType?: string): Promise<
           )
         )
       `, { count: 'exact' })
-      .order('date', { ascending: false }) // This ensures newest items appear first
-      .order('created_at', { ascending: false }); // Secondary sort by created_at
+      .order('date', { ascending: false }) // Primary sort by date
+      .order('id', { ascending: false }); // Secondary sort by ID to ensure consistent ordering
 
     // Add content type filter if specified
     if (contentType && contentType !== 'all') {
