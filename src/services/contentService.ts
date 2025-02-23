@@ -126,10 +126,16 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
   }
 }
 
-// Expose functions for testing
+// Create and expose the content service immediately
+const contentService = {
+  refreshFeeds,
+  fetchContent
+};
+
+// Expose to window object
 if (typeof window !== 'undefined') {
-  (window as any).contentService = {
-    refreshFeeds,
-    fetchContent
-  };
+  (window as any).contentService = contentService;
 }
+
+// Export for use in components
+export default contentService;
