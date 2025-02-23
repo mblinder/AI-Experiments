@@ -45,6 +45,22 @@ const ContentCard = ({
     return stripped;
   }, [description]);
 
+  // Function to get the actual media URL from RSS feeds
+  const getMediaUrl = (url: string): string => {
+    // Handle Substack URLs
+    if (url.includes('substack.com')) {
+      // Convert RSS feed URL to actual episode URL
+      return url.replace('/feed/podcast/', '/podcast/player-') + '.mp3';
+    }
+    // Handle Megaphone URLs
+    if (url.includes('megaphone.fm')) {
+      // Convert RSS feed URL to direct player URL
+      const episodeId = url.split('/').pop();
+      return `https://player.megaphone.fm/${episodeId}`;
+    }
+    return url;
+  };
+
   const handleMediaClick = (e: React.MouseEvent) => {
     if (type === 'video' || type === 'podcast') {
       e.preventDefault();
@@ -77,16 +93,27 @@ const ContentCard = ({
           }
         },
         file: {
-          forceAudio: type === 'podcast'
+          forceAudio: type === 'podcast',
+          attributes: {
+            style: {
+              width: '100%',
+              height: '100%'
+            }
+          }
         }
       };
 
+      const mediaUrl = type === 'podcast' ? getMediaUrl(link) : link;
+
       return (
-        <div className={`${type === 'video' ? 'aspect-video' : 'h-[200px]'} w-full relative`} onClick={handleMediaClick}>
+        <div 
+          className={`${type === 'video' ? 'aspect-video' : 'h-[180px]'} w-full relative`} 
+          onClick={handleMediaClick}
+        >
           {isPlaying ? (
             <div className="absolute inset-0">
               <ReactPlayer
-                url={link}
+                url={mediaUrl}
                 width="100%"
                 height="100%"
                 controls={true}
