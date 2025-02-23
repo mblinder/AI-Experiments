@@ -23,9 +23,9 @@ interface PagedResponse {
   nextPage: number | null;
 }
 
-// Initialize Supabase client
+// Initialize Supabase client with direct values
 const supabaseUrl = 'https://pnaskrgaijwmjkbvxlfo.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuYXNrcmdhaWp3bWprYnZ4bGZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzMDIzMjMsImV4cCI6MjA1NTg3ODMyM30.jpwQ5ENqgZVRg7LSpMt0fvrVVAu7cwOU7GkjaGCWKDA';
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
