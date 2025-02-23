@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { XMLParser } from 'npm:fast-xml-parser';
 
@@ -16,6 +17,9 @@ const YOUTUBE_CHANNEL_ID = 'UCG4Hp1KbGw4e02N7FpPXDgQ';
 const YOUTUBE_RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
 
 serve(async (req) => {
+  console.log('Edge Function started');
+  console.log('Request method:', req.method);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -37,15 +41,21 @@ serve(async (req) => {
     });
 
     // Fetch and parse podcast feeds
+    console.log('Starting to fetch podcast feeds...');
     const podcastPromises = PODCAST_FEEDS.map(async (feedUrl) => {
       try {
         console.log(`Fetching podcast feed: ${feedUrl}`);
         const response = await fetch(feedUrl);
+        console.log(`Podcast feed ${feedUrl} status:`, response.status);
+        
         if (!response.ok) {
           console.error(`Failed to fetch podcast feed ${feedUrl}: ${response.status}`);
           return [];
         }
+        
         const xmlData = await response.text();
+        console.log(`Podcast feed ${feedUrl} data length:`, xmlData.length);
+        
         const result = parser.parse(xmlData);
         console.log('Podcast feed parsed:', result?.rss?.channel?.title);
         return result?.rss?.channel?.item || [];
@@ -56,12 +66,11 @@ serve(async (req) => {
     });
 
     // Fetch and parse YouTube feed
+    console.log('Starting to fetch YouTube feed...');
     const fetchYouTubeVideos = async () => {
       try {
-        console.log('Fetching YouTube feed:', YOUTUBE_RSS_URL);
+        console.log('YouTube feed URL:', YOUTUBE_RSS_URL);
         const response = await fetch(YOUTUBE_RSS_URL);
-        
-        // Log the response status and URL
         console.log('YouTube response status:', response.status);
         console.log('YouTube response URL:', response.url);
         
@@ -71,10 +80,12 @@ serve(async (req) => {
         }
         
         const xmlData = await response.text();
-        console.log('YouTube XML data received:', xmlData.substring(0, 200) + '...'); // Log first 200 chars
+        console.log('YouTube XML data length:', xmlData.length);
+        console.log('First 200 chars of YouTube data:', xmlData.substring(0, 200));
         
         const result = parser.parse(xmlData);
-        console.log('YouTube feed parsed result:', JSON.stringify(result, null, 2));
+        console.log('YouTube feed entries count:', result?.feed?.entry?.length || 0);
+        console.log('First YouTube entry:', result?.feed?.entry?.[0]?.title || 'No entries');
         
         return result?.feed?.entry || [];
       } catch (error) {
@@ -84,13 +95,15 @@ serve(async (req) => {
       }
     };
 
-    // Wait for all feeds to be fetched
+    console.log('Waiting for all feeds to be fetched...');
     const [podcastResults, videoResults] = await Promise.all([
       Promise.all(podcastPromises),
       fetchYouTubeVideos()
     ]);
+    console.log('All feeds fetched successfully');
 
     // Process podcast items
+    console.log('Processing podcast items...');
     const allPodcasts = podcastResults.flat().map(item => {
       console.log('Processing podcast item:', item.title);
       return {
@@ -106,8 +119,9 @@ serve(async (req) => {
     });
 
     // Process YouTube items
+    console.log('Processing YouTube items...');
     const allVideos = (Array.isArray(videoResults) ? videoResults : []).map(item => {
-      console.log('Processing video item:', JSON.stringify(item, null, 2));
+      console.log('Processing video item:', item.title);
       return {
         id: item.id,
         title: item.title,
@@ -135,6 +149,7 @@ serve(async (req) => {
     
     const hasMorePages = endIndex < allItems.length;
     
+    console.log('Sending response with items:', paginatedItems.length);
     return new Response(
       JSON.stringify({
         items: paginatedItems,
