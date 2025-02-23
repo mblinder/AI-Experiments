@@ -54,9 +54,9 @@ const mockData = [
 const Index = () => {
   const [activeTab, setActiveTab] = useState('all');
 
-  const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData>({
+  const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData, Error, PageData, [string], number>({
     queryKey: ['content'],
-    queryFn: async ({ pageParam = 1 }) => {
+    queryFn: async ({ pageParam }) => {
       // This would be replaced with actual API calls to fetch content
       return {
         items: mockData,
