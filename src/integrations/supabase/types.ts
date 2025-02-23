@@ -13,111 +13,135 @@ export type Database = {
         Row: {
           author: string | null
           content: string
-          content_id: number
+          content_id: number | null
           id: number
         }
         Insert: {
           author?: string | null
           content: string
-          content_id: number
+          content_id?: number | null
           id?: number
         }
         Update: {
           author?: string | null
           content?: string
-          content_id?: number
+          content_id?: number | null
           id?: number
         }
         Relationships: [
           {
             foreignKeyName: "articles_content_id_fkey"
             columns: ["content_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
         ]
       }
-      content_items: {
-        Row: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at: string
-          description: string | null
-          id: number
-          published_at: string
-          source_url: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at?: string
-          description?: string | null
-          id?: number
-          published_at: string
-          source_url: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          content_type?: Database["public"]["Enums"]["content_type"]
-          created_at?: string
-          description?: string | null
-          id?: number
-          published_at?: string
-          source_url?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      content_tags: {
+      content_item_tags: {
         Row: {
           content_id: number
-          created_at: string
+          created_at: string | null
           tag_id: number
         }
         Insert: {
           content_id: number
-          created_at?: string
+          created_at?: string | null
           tag_id: number
         }
         Update: {
           content_id?: number
-          created_at?: string
+          created_at?: string | null
           tag_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "content_tags_content_id_fkey"
+            foreignKeyName: "content_item_tags_content_id_fkey"
             columns: ["content_id"]
             isOneToOne: false
             referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "content_tags_tag_id_fkey"
+            foreignKeyName: "content_item_tags_tag_id_fkey"
             columns: ["tag_id"]
             isOneToOne: false
-            referencedRelation: "tags"
+            referencedRelation: "content_tags"
             referencedColumns: ["id"]
           },
         ]
       }
+      content_items: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          description: string | null
+          id: number
+          image_url: string | null
+          link: string
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          description?: string | null
+          id?: number
+          image_url?: string | null
+          link: string
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          description?: string | null
+          id?: number
+          image_url?: string | null
+          link?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      content_tags: {
+        Row: {
+          created_at: string | null
+          id: number
+          name: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          name: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
       global_config: {
         Row: {
           key: string
-          updated_at: string
+          updated_at: string | null
           value: Json
         }
         Insert: {
           key: string
-          updated_at?: string
+          updated_at?: string | null
           value: Json
         }
         Update: {
           key?: string
-          updated_at?: string
+          updated_at?: string | null
           value?: Json
         }
         Relationships: []
@@ -126,7 +150,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
-          content_id: number
+          content_id: number | null
           full_name: string
           id: number
           social_links: Json | null
@@ -134,7 +158,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
-          content_id: number
+          content_id?: number | null
           full_name: string
           id?: number
           social_links?: Json | null
@@ -142,7 +166,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
-          content_id?: number
+          content_id?: number | null
           full_name?: string
           id?: number
           social_links?: Json | null
@@ -151,7 +175,7 @@ export type Database = {
           {
             foreignKeyName: "people_content_id_fkey"
             columns: ["content_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
@@ -160,7 +184,7 @@ export type Database = {
       podcasts: {
         Row: {
           audio_url: string
-          content_id: number
+          content_id: number | null
           duration: number | null
           episode_number: number | null
           id: number
@@ -168,7 +192,7 @@ export type Database = {
         }
         Insert: {
           audio_url: string
-          content_id: number
+          content_id?: number | null
           duration?: number | null
           episode_number?: number | null
           id?: number
@@ -176,7 +200,7 @@ export type Database = {
         }
         Update: {
           audio_url?: string
-          content_id?: number
+          content_id?: number | null
           duration?: number | null
           episode_number?: number | null
           id?: number
@@ -186,7 +210,7 @@ export type Database = {
           {
             foreignKeyName: "podcasts_content_id_fkey"
             columns: ["content_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
@@ -215,21 +239,21 @@ export type Database = {
       }
       videos: {
         Row: {
-          content_id: number
+          content_id: number | null
           duration: number | null
           id: number
           thumbnail_url: string | null
           video_url: string
         }
         Insert: {
-          content_id: number
+          content_id?: number | null
           duration?: number | null
           id?: number
           thumbnail_url?: string | null
           video_url: string
         }
         Update: {
-          content_id?: number
+          content_id?: number | null
           duration?: number | null
           id?: number
           thumbnail_url?: string | null
@@ -239,7 +263,7 @@ export type Database = {
           {
             foreignKeyName: "videos_content_id_fkey"
             columns: ["content_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "content_items"
             referencedColumns: ["id"]
           },
