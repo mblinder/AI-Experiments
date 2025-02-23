@@ -84,14 +84,6 @@ export async function fetchContent(page: number, contentType?: string): Promise<
         type: tag.content_tags.type as ContentTag['type']
       })).filter(Boolean) || [];
 
-      if (item.source_tag_id && item.source_tag_name) {
-        tags.push({
-          id: item.source_tag_id,
-          name: item.source_tag_name,
-          type: 'source'
-        });
-      }
-
       return {
         id: item.id,
         title: item.title,
