@@ -96,7 +96,7 @@ const ContentDetails = () => {
 
             <div 
               className="prose dark:prose-invert max-w-none mb-6"
-              dangerouslySetInnerHTML={{ __html: contentData.description }}
+              dangerouslySetInnerHTML={{ __html: contentData.content }}
             />
 
             <a 

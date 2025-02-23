@@ -44,6 +44,7 @@ export type Database = {
       }
       content_items: {
         Row: {
+          content: string | null
           created_at: string | null
           date: string
           description: string | null
@@ -57,6 +58,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          content?: string | null
           created_at?: string | null
           date: string
           description?: string | null
@@ -70,6 +72,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          content?: string | null
           created_at?: string | null
           date?: string
           description?: string | null

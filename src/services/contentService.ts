@@ -11,6 +11,7 @@ export interface ContentItem {
   id: string;
   title: string;
   description: string;
+  content: string;
   type: 'article' | 'video' | 'podcast';
   imageUrl?: string;
   date: string;
@@ -91,6 +92,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
         id,
         title,
         description,
+        content,
         type,
         image_url,
         date,
@@ -130,6 +132,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
         id: item.id,
         title: item.title,
         description: item.description || '',
+        content: item.content || item.description || '',
         type: item.type as 'article' | 'video' | 'podcast',
         imageUrl: item.image_url,
         date: item.date,
