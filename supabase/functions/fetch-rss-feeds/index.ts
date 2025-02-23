@@ -15,7 +15,6 @@ const PODCAST_FEED_URL = 'https://feeds.megaphone.fm/TPW1449071235';
 
 // Bulwark Media channel ID
 const YOUTUBE_CHANNEL_ID = 'UCG4Hp1KbGw4e02N7FpPXDgQ';
-const YOUTUBE_RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
 
 serve(async (req) => {
   console.log('Edge Function started');
@@ -121,35 +120,51 @@ serve(async (req) => {
       }
     };
 
-    console.log('Starting to fetch YouTube feed...');
+    console.log('Starting to fetch YouTube videos...');
     const fetchYouTubeVideos = async () => {
       try {
-        console.log('YouTube feed URL:', YOUTUBE_RSS_URL);
-        const response = await fetch(YOUTUBE_RSS_URL);
-        console.log('YouTube response status:', response.status);
-        
-        if (!response.ok) {
-          console.error(`Failed to fetch YouTube feed: ${response.status}`);
-          return [];
+        const YOUTUBE_API_KEY = Deno.env.get('YOUTUBE_API_KEY');
+        if (!YOUTUBE_API_KEY) {
+          throw new Error('YouTube API key not found');
         }
+
+        // First, get the playlist ID for uploads
+        const channelResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${YOUTUBE_CHANNEL_ID}&key=${YOUTUBE_API_KEY}`
+        );
         
-        const xmlData = await response.text();
-        console.log('YouTube data length:', xmlData.length);
-        
-        const result = parser.parse(xmlData);
-        const entries = result?.feed?.entry || [];
-        return entries.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.summary?.__cdata || item.summary || '',
+        if (!channelResponse.ok) {
+          throw new Error(`Failed to fetch channel data: ${channelResponse.status}`);
+        }
+
+        const channelData = await channelResponse.json();
+        const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+
+        // Then fetch videos from the uploads playlist
+        const videoResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${uploadsPlaylistId}&key=${YOUTUBE_API_KEY}`
+        );
+
+        if (!videoResponse.ok) {
+          throw new Error(`Failed to fetch videos: ${videoResponse.status}`);
+        }
+
+        const videoData = await videoResponse.json();
+        console.log(`Found ${videoData.items.length} videos`);
+
+        return videoData.items.map(item => ({
+          id: item.snippet.resourceId.videoId,
+          title: item.snippet.title,
+          description: item.snippet.description || '',
           type: 'video',
-          imageUrl: item['media:group']?.['media:thumbnail']?.['@_url'] || item['media:thumbnail']?.['@_url'] || '',
-          date: new Date(item.published).toISOString(), // Ensure consistent date format
-          link: item.link?.['@_href'] || item.link,
+          imageUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
+          date: new Date(item.snippet.publishedAt).toISOString(),
+          link: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
           tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
         }));
       } catch (error) {
-        console.error('Error fetching YouTube feed:', error);
+        console.error('Error fetching YouTube videos:', error);
+        console.error(error.stack);
         return [];
       }
     };
