@@ -22,7 +22,7 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
 }) => {
   if (type === 'article') {
     return imageUrl ? (
-      <div className="aspect-video w-full overflow-hidden">
+      <div className="h-48 w-full overflow-hidden">
         <img 
           src={imageUrl} 
           alt={title}
@@ -57,7 +57,7 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   return (
     <div 
-      className={`${type === 'video' ? 'aspect-video' : 'h-[180px]'} w-full relative`} 
+      className={`${type === 'video' ? 'h-48' : 'h-32'} w-full relative cursor-pointer`} 
       onClick={onMediaClick}
     >
       {isPlaying ? (
@@ -65,7 +65,7 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
           {link.includes('podcasts.apple.com') ? (
             <iframe
               src={mediaUrl}
-              height="175px"
+              height="100%"
               frameBorder="0"
               sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
               allow="autoplay *; encrypted-media *; fullscreen *"
@@ -94,13 +94,13 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
             <img 
               src={imageUrl} 
               alt={title}
-              className="w-full h-full object-cover cursor-pointer"
+              className="w-full h-full object-cover"
             />
           )}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 bg-primary/90 rounded-full flex items-center justify-center cursor-pointer hover:bg-primary transition-colors">
+            <div className="w-12 h-12 bg-primary/90 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
               <svg 
-                className="w-8 h-8 text-white" 
+                className="w-6 h-6 text-white" 
                 fill="currentColor" 
                 viewBox="0 0 20 20"
               >
