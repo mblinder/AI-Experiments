@@ -4,7 +4,10 @@ import { createXmlParser, fetchRssFeed } from './rssUtils.ts';
 
 const ARTICLES_FEEDS = [
   'https://thetriad.thebulwark.com/feed',
-  'https://morningshots.thebulwark.com/feed'
+  'https://morningshots.thebulwark.com/feed',
+  'https://www.thebulwark.com/s/overtime',
+  'https://www.thebulwark.com/s/huddled-masses',
+  'https://www.thebulwark.com/s/presspass'
 ];
 
 export async function fetchArticles(): Promise<ContentItem[]> {
