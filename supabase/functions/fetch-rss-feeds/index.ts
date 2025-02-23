@@ -32,6 +32,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    let processedItems = 0;
+
     if (updateDb) {
       console.log(`Processing content items...`);
       
@@ -46,24 +48,37 @@ serve(async (req) => {
               content_type: item.type,
               source_url: item.link,
               published_at: new Date(item.date).toISOString(),
+            }, {
+              onConflict: 'source_url',
+              ignoreDuplicates: false
             })
             .select()
             .single();
 
-          if (contentError) throw contentError;
-          if (!contentItem) throw new Error('Failed to insert content item');
+          if (contentError) {
+            console.error('Error inserting content item:', contentError);
+            continue;
+          }
+          if (!contentItem) {
+            console.error('Failed to insert content item');
+            continue;
+          }
+
+          console.log(`Processing content item: ${contentItem.id} - ${item.title}`);
 
           // Then insert the type-specific content
           if (item.type === 'article' && 'content' in item) {
-            await supabase
+            const { error: articleError } = await supabase
               .from('articles')
               .upsert({
                 content_id: contentItem.id,
                 content: item.content,
                 author: (item as any).author
               });
+            
+            if (articleError) console.error('Error inserting article:', articleError);
           } else if (item.type === 'video') {
-            await supabase
+            const { error: videoError } = await supabase
               .from('videos')
               .upsert({
                 content_id: contentItem.id,
@@ -71,8 +86,10 @@ serve(async (req) => {
                 thumbnail_url: (item as any).thumbnailUrl,
                 duration: (item as any).duration
               });
+            
+            if (videoError) console.error('Error inserting video:', videoError);
           } else if (item.type === 'podcast') {
-            await supabase
+            const { error: podcastError } = await supabase
               .from('podcasts')
               .upsert({
                 content_id: contentItem.id,
@@ -81,38 +98,61 @@ serve(async (req) => {
                 episode_number: (item as any).episodeNumber,
                 season_number: (item as any).seasonNumber
               });
+            
+            if (podcastError) console.error('Error inserting podcast:', podcastError);
           }
 
           // Handle tags
           if (item.tags && item.tags.length > 0) {
             for (const tag of item.tags) {
-              // Insert or get tag
-              const { data: tagData, error: tagError } = await supabase
-                .from('tags')
-                .upsert({
-                  name: tag.name,
-                  type: tag.type
-                })
-                .select()
-                .single();
+              try {
+                // First try to get existing tag
+                let { data: existingTag } = await supabase
+                  .from('tags')
+                  .select('id')
+                  .eq('name', tag.name)
+                  .eq('type', tag.type)
+                  .single();
 
-              if (tagError) throw tagError;
-              if (!tagData) throw new Error('Failed to insert tag');
+                if (!existingTag) {
+                  // If tag doesn't exist, create it
+                  const { data: newTag, error: tagError } = await supabase
+                    .from('tags')
+                    .insert({
+                      name: tag.name,
+                      type: tag.type
+                    })
+                    .select()
+                    .single();
 
-              // Create content-tag association
-              await supabase
-                .from('content_tags')
-                .upsert({
-                  content_id: contentItem.id,
-                  tag_id: tagData.id
-                });
+                  if (tagError) {
+                    console.error('Error inserting tag:', tagError);
+                    continue;
+                  }
+                  existingTag = newTag;
+                }
+
+                // Create content-tag association
+                if (existingTag) {
+                  const { error: linkError } = await supabase
+                    .from('content_tags')
+                    .upsert({
+                      content_id: contentItem.id,
+                      tag_id: existingTag.id
+                    });
+
+                  if (linkError) console.error('Error linking tag to content:', linkError);
+                }
+              } catch (tagError) {
+                console.error(`Error processing tag ${tag.name}:`, tagError);
+              }
             }
           }
 
+          processedItems++;
           console.log(`Successfully processed item: ${item.title}`);
         } catch (error) {
           console.error(`Error processing item ${item.title}:`, error);
-          // Continue with next item
           continue;
         }
       }
@@ -121,7 +161,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        itemsProcessed: articles.length + podcasts.length + videos.length 
+        itemsProcessed: processedItems
       }),
       { 
         headers: {
