@@ -12,7 +12,7 @@ interface PageData {
 }
 
 const Index = () => {
-  const [selectedContentType, setSelectedContentType] = useState<'all' | 'article' | 'video'>('all');
+  const [selectedContentType, setSelectedContentType] = useState<'all' | 'article' | 'video' | 'podcast'>('all');
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData>({
@@ -37,7 +37,7 @@ const Index = () => {
     setActiveTag(tagId === activeTag ? null : tagId);
   };
 
-  const handleMenuClick = (type: 'all' | 'article' | 'video') => {
+  const handleMenuClick = (type: 'all' | 'article' | 'video' | 'podcast') => {
     setSelectedContentType(type);
   };
 

@@ -8,11 +8,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
-import { Newspaper, Video, Settings } from "lucide-react"
+import { Newspaper, Video, Headphones, Settings } from "lucide-react"
 
 interface MainSidebarProps {
-  onMenuClick: (type: 'all' | 'article' | 'video') => void;
-  activeType: 'all' | 'article' | 'video';
+  onMenuClick: (type: 'all' | 'article' | 'video' | 'podcast') => void;
+  activeType: 'all' | 'article' | 'video' | 'podcast';
 }
 
 export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
@@ -39,6 +39,15 @@ export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
             >
               <Video className="h-4 w-4" />
               <span>Videos</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton 
+              onClick={() => onMenuClick('podcast')}
+              isActive={activeType === 'podcast'}
+            >
+              <Headphones className="h-4 w-4" />
+              <span>Podcasts</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
