@@ -29,7 +29,6 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Reduce initial page size for faster first load
 const INITIAL_PAGE_SIZE = 10;
 const SUBSEQUENT_PAGE_SIZE = 10;
 const UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -38,31 +37,27 @@ let lastUpdateTime = 0;
 
 async function checkForNewContent() {
   const now = Date.now();
-  // Only check for new content every 5 minutes
   if (now - lastUpdateTime < UPDATE_INTERVAL) {
     return;
   }
 
   try {
-    // Get the most recent item's date
     const { data: latestItem } = await supabase
       .from('content_items')
-      .select('date')
-      .order('date', { ascending: false })
+      .select('published_at')
+      .order('published_at', { ascending: false })
       .limit(1)
       .single();
 
     if (latestItem) {
-      // Trigger background update if we have items
-      console.log('Checking for new content since:', new Date(latestItem.date).toISOString());
+      console.log('Checking for new content since:', new Date(latestItem.published_at).toISOString());
       supabase.functions.invoke('fetch-rss-feeds', {
         body: { 
           updateDb: true,
-          since: latestItem.date 
+          since: latestItem.published_at 
         },
       }).catch(console.error);
     } else {
-      // If no items exist, do a full fetch
       console.log('No existing content, performing full fetch');
       supabase.functions.invoke('fetch-rss-feeds', {
         body: { updateDb: true },
@@ -81,7 +76,6 @@ export async function fetchContent(page: number, contentType?: string): Promise<
     const start = page === 1 ? 0 : INITIAL_PAGE_SIZE + ((page - 2) * SUBSEQUENT_PAGE_SIZE);
     const end = start + itemsPerPage - 1;
 
-    // Only check for updates on first page load
     if (page === 1) {
       await checkForNewContent();
     }
@@ -92,24 +86,25 @@ export async function fetchContent(page: number, contentType?: string): Promise<
         id,
         title,
         description,
-        content,
-        type,
-        image_url,
-        date,
-        link,
-        content_item_tags:content_item_tags (
-          content_tags (
+        content_type,
+        source_url,
+        published_at,
+        articles (
+          content
+        ),
+        content_tags (
+          tags (
             id,
             name,
             type
           )
         )
       `, { count: 'exact' })
-      .order('date', { ascending: false })
+      .order('published_at', { ascending: false })
       .order('id', { ascending: false });
 
     if (contentType && contentType !== 'all') {
-      query = query.eq('type', contentType);
+      query = query.eq('content_type', contentType);
     }
 
     query = query.range(start, end);
@@ -122,21 +117,20 @@ export async function fetchContent(page: number, contentType?: string): Promise<
     }
 
     const transformedItems: ContentItem[] = items.map(item => {
-      const tags: ContentTag[] = item.content_item_tags?.map((tag: any) => ({
-        id: tag.content_tags.id,
-        name: tag.content_tags.name,
-        type: tag.content_tags.type as ContentTag['type']
+      const tags: ContentTag[] = item.content_tags?.map((tag: any) => ({
+        id: tag.tags.id,
+        name: tag.tags.name,
+        type: tag.tags.type as ContentTag['type']
       })).filter(Boolean) || [];
 
       return {
         id: item.id,
         title: item.title,
         description: item.description || '',
-        content: item.content || item.description || '',
-        type: item.type as 'article' | 'video' | 'podcast',
-        imageUrl: item.image_url,
-        date: item.date,
-        link: item.link,
+        content: item.articles?.[0]?.content || item.description || '',
+        type: item.content_type,
+        date: item.published_at,
+        link: item.source_url,
         tags
       };
     });
