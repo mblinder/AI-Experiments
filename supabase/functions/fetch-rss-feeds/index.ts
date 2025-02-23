@@ -12,9 +12,9 @@ const PODCAST_FEEDS = [
   'https://api.substack.com/feed/podcast/87281/s/87961/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss'
 ];
 
-// Bulwark Media channel ID
-const YOUTUBE_CHANNEL_ID = 'UCd5BNKWR5p6p7ZN6_gt3WZQ';
-const YOUTUBE_RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
+// Bulwark Media channel
+const YOUTUBE_CHANNEL = '@bulwarkmedia';
+const YOUTUBE_RSS_URL = `https://www.youtube.com/feeds/videos.xml?user=${YOUTUBE_CHANNEL}`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -25,7 +25,7 @@ serve(async (req) => {
     const { page = 1 } = await req.json();
     console.log('Fetching content for page:', page);
 
-    // Configure XML parser with options for handling CDATA and attributes
+    // Configure XML parser
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',
@@ -61,16 +61,26 @@ serve(async (req) => {
       try {
         console.log('Fetching YouTube feed:', YOUTUBE_RSS_URL);
         const response = await fetch(YOUTUBE_RSS_URL);
+        
+        // Log the response status and URL
+        console.log('YouTube response status:', response.status);
+        console.log('YouTube response URL:', response.url);
+        
         if (!response.ok) {
           console.error(`Failed to fetch YouTube feed: ${response.status}`);
           return [];
         }
+        
         const xmlData = await response.text();
+        console.log('YouTube XML data received:', xmlData.substring(0, 200) + '...'); // Log first 200 chars
+        
         const result = parser.parse(xmlData);
-        console.log('YouTube feed parsed:', result?.feed?.title);
+        console.log('YouTube feed parsed result:', JSON.stringify(result, null, 2));
+        
         return result?.feed?.entry || [];
       } catch (error) {
         console.error('Error fetching YouTube feed:', error);
+        console.error('Error details:', error.stack);
         return [];
       }
     };
@@ -98,13 +108,13 @@ serve(async (req) => {
 
     // Process YouTube items
     const allVideos = (Array.isArray(videoResults) ? videoResults : []).map(item => {
-      console.log('Processing video item:', item.title);
+      console.log('Processing video item:', JSON.stringify(item, null, 2));
       return {
         id: item.id,
         title: item.title,
         description: item.summary?.__cdata || item.summary || '',
         type: 'video',
-        imageUrl: item['media:group']?.['media:thumbnail']?.['@_url'] || '',
+        imageUrl: item['media:group']?.['media:thumbnail']?.['@_url'] || item['media:thumbnail']?.['@_url'] || '',
         date: item.published,
         link: item.link?.['@_href'] || item.link,
         tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
@@ -141,10 +151,12 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error processing request:', error);
+    console.error('Stack trace:', error.stack);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
-        details: error.message 
+        details: error.message,
+        stack: error.stack 
       }),
       { 
         status: 500,
