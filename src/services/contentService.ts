@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface ContentTag {
   id: string;
@@ -23,7 +24,9 @@ interface PagedResponse {
   nextPage: number | null;
 }
 
-export async function fetchContent(page: number, contentType?: string): Promise<PagedResponse> {
+type ContentType = Database['public']['Enums']['content_type'];
+
+export async function fetchContent(page: number, contentType?: ContentType | 'all'): Promise<PagedResponse> {
   try {
     let query = supabase
       .from('content_items')
@@ -65,15 +68,15 @@ export async function fetchContent(page: number, contentType?: string): Promise<
     }
 
     const transformedItems: ContentItem[] = items.map(item => ({
-      id: item.id,
+      id: String(item.id), // Convert number to string
       title: item.title,
       description: item.description || '',
-      type: item.content_type,
+      type: item.content_type as ContentItem['type'], // Explicitly type as allowed content type
       imageUrl: item.videos?.[0]?.thumbnail_url || undefined,
       date: item.published_at,
       link: item.source_url,
       tags: item.content_tags?.map((tag: any) => ({
-        id: tag.tags.id,
+        id: String(tag.tags.id), // Convert number to string
         name: tag.tags.name,
         type: tag.tags.type
       })) || []
