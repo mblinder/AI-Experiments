@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -45,22 +44,11 @@ const ContentCard = ({
     return stripped;
   }, [description]);
 
-  // Function to get the actual media URL from RSS feeds
   const getMediaUrl = (url: string): string => {
-    // Handle Substack URLs
     if (url.includes('substack.com')) {
-      // Convert RSS feed URL to actual episode URL
       return url.replace('/feed/podcast/', '/podcast/player-') + '.mp3';
     }
-    // Handle Megaphone URLs
-    if (url.includes('megaphone.fm')) {
-      // Convert RSS feed URL to direct player URL
-      const episodeId = url.split('/').pop();
-      return `https://player.megaphone.fm/${episodeId}`;
-    }
-    // Handle Apple Podcasts URLs
     if (url.includes('podcasts.apple.com')) {
-      // Extract the show ID and episode ID from the URL
       const showIdMatch = url.match(/\/id(\d+)/);
       const episodeIdMatch = url.match(/\?i=(\d+)/);
       
@@ -69,7 +57,6 @@ const ContentCard = ({
         const episodeId = episodeIdMatch[1];
         return `https://embed.podcasts.apple.com/us/podcast/id${showId}?i=${episodeId}`;
       } else if (showIdMatch) {
-        // If it's just a show URL without an episode ID
         const showId = showIdMatch[1];
         return `https://embed.podcasts.apple.com/us/podcast/id${showId}`;
       }
