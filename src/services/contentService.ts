@@ -1,5 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 export interface ContentTag {
   id: string;
@@ -29,6 +31,10 @@ export async function refreshFeeds() {
   console.log('Starting feed refresh...');
   
   try {
+    // Check if edge function exists and is accessible
+    const { data: functions } = await supabase.functions.list();
+    console.log('Available functions:', functions);
+
     // Call the edge function to fetch new content
     const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
       body: { 
@@ -38,19 +44,24 @@ export async function refreshFeeds() {
     
     if (error) {
       console.error('Error refreshing feeds:', error);
+      toast.error('Failed to refresh feeds');
       throw error;
     }
     
     console.log('Feed refresh completed:', data);
+    toast.success('Feeds refreshed successfully');
     return data;
   } catch (error) {
     console.error('Failed to refresh feeds:', error);
+    toast.error('Failed to refresh feeds');
     throw error;
   }
 }
 
 export async function fetchContent(page: number, contentType?: ContentType | 'all'): Promise<PagedResponse> {
   try {
+    console.log('Fetching content with params:', { page, contentType });
+    
     let query = supabase
       .from('content_items')
       .select(`
@@ -87,8 +98,11 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
 
     if (error) {
       console.error('Error fetching content:', error);
+      toast.error('Failed to fetch content');
       throw error;
     }
+
+    console.log('Fetched items:', items);
 
     const transformedItems: ContentItem[] = items.map(item => ({
       id: String(item.id),
@@ -111,6 +125,7 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
     };
   } catch (error) {
     console.error('Error in fetchContent:', error);
+    toast.error('Failed to fetch content');
     throw error;
   }
 }
