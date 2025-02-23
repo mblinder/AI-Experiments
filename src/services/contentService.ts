@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 export interface ContentTag {
   id: string;
   name: string;
-  type: 'participant' | 'topic' | 'source';
+  type: 'participant' | 'topic' | 'source' | 'author';
 }
 
 export interface ContentItem {
@@ -39,10 +39,19 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
       body: { updateDb: true },
     });
 
-    // Then fetch paginated results from the database
+    // Fetch content items with their associated tags
     const { data: items, error, count } = await supabase
       .from('content_items')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        content_item_tags!inner (
+          content_tags (
+            id,
+            name,
+            type
+          )
+        )
+      `, { count: 'exact' })
       .order('date', { ascending: false })
       .range(start, end);
 
@@ -52,20 +61,34 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
     }
 
     // Transform the data to match the ContentItem interface with proper typing
-    const transformedItems: ContentItem[] = items.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description || '',
-      type: item.type as 'article' | 'video' | 'podcast',
-      imageUrl: item.image_url,
-      date: item.date,
-      link: item.link,
-      tags: [{
-        id: item.source_tag_id || `source-${item.type}`,
-        name: item.source_tag_name || item.type,
-        type: 'source' as const // Explicitly type this as a literal 'source'
-      }]
-    }));
+    const transformedItems: ContentItem[] = items.map(item => {
+      // Extract tags from the nested structure
+      const tags: ContentTag[] = item.content_item_tags?.map((tag: any) => ({
+        id: tag.content_tags.id,
+        name: tag.content_tags.name,
+        type: tag.content_tags.type as ContentTag['type']
+      })) || [];
+
+      // Add source tag if it exists in the item
+      if (item.source_tag_id && item.source_tag_name) {
+        tags.push({
+          id: item.source_tag_id,
+          name: item.source_tag_name,
+          type: 'source' as const
+        });
+      }
+
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        type: item.type as 'article' | 'video' | 'podcast',
+        imageUrl: item.image_url,
+        date: item.date,
+        link: item.link,
+        tags
+      };
+    });
 
     const hasMore = count ? count > (page * itemsPerPage) : false;
 
