@@ -3,7 +3,8 @@ import { ContentItem } from './types.ts';
 import { createXmlParser, fetchRssFeed } from './rssUtils.ts';
 
 const PODCAST_FEEDS = [
-  'https://thebulwark.substack.com/podcast',  // Main podcast feed URL
+  'https://thebulwark.substack.com/podcast/87957',  // Public URL for Bulwark podcast
+  'https://thebulwark.substack.com/podcast/87961'   // Public URL for Focus Group podcast
 ];
 
 export async function fetchPodcasts(): Promise<ContentItem[]> {
@@ -30,7 +31,7 @@ export async function fetchPodcasts(): Promise<ContentItem[]> {
                      item.image?.url || 
                      result?.rss?.channel?.['itunes:image']?.['@_href'],
             date: new Date(item.pubDate).toISOString(),
-            link: `https://thebulwark.substack.com/p/${item.link.split('/').pop()}`,  // Convert to public Substack URL
+            link: item.link,
             tags: [{ 
               id: 'source-podcast', 
               name: result?.rss?.channel?.title || 'Podcast', 
@@ -50,3 +51,4 @@ export async function fetchPodcasts(): Promise<ContentItem[]> {
     return [];
   }
 }
+

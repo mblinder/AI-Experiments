@@ -8,12 +8,7 @@ export const stripHtmlTags = (html: string) => {
 
 export const getMediaUrl = (url: string): string => {
   if (url.includes('substack.com')) {
-    // Convert the Substack URL to an embed URL
-    const postPath = url.split('/p/')[1];
-    if (postPath) {
-      return `https://thebulwark.substack.com/embed/p/${postPath}`;
-    }
-    return url;
+    return url.replace('/feed/podcast/', '/podcast/player-') + '.mp3';
   }
   
   if (url.includes('podcasts.apple.com')) {
@@ -32,3 +27,4 @@ export const getMediaUrl = (url: string): string => {
   
   return url;
 };
+
