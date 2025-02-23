@@ -13,7 +13,7 @@ interface PageData {
 }
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<'all' | 'article' | 'video' | 'podcast'>('all');
+  const [selectedContentType, setSelectedContentType] = useState<'all' | 'article' | 'video'>('all');
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData>({
@@ -30,15 +30,22 @@ const Index = () => {
   });
 
   const allItems = data?.pages.flatMap(page => page.items) ?? [];
+  const filteredItems = selectedContentType === 'all' 
+    ? allItems 
+    : allItems.filter(item => item.type === selectedContentType);
 
   const handleTagClick = (tagId: string) => {
     setActiveTag(tagId === activeTag ? null : tagId);
   };
 
+  const handleMenuClick = (type: 'all' | 'article' | 'video') => {
+    setSelectedContentType(type);
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <MainSidebar />
+        <MainSidebar onMenuClick={handleMenuClick} activeType={selectedContentType} />
         <main className="flex-1">
           <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 dark:bg-black/80 border-b border-gray-200/50 dark:border-gray-800/50 h-16">
             <div className="h-full w-full max-w-7xl mx-auto px-4 flex items-center justify-between">
@@ -56,8 +63,8 @@ const Index = () => {
             </div>
           </header>
           <ContentFeed 
-            items={allItems} 
-            type={activeTab}
+            items={filteredItems} 
+            type={selectedContentType}
             hasMore={!!hasNextPage}
             isLoading={isLoading}
             onLoadMore={fetchNextPage}

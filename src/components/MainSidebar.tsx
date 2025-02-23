@@ -8,9 +8,14 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
-import { Podcast, Video, Users, Globe, Settings, BookOpen } from "lucide-react"
+import { Newspaper, Video, Settings } from "lucide-react"
 
-export function MainSidebar() {
+interface MainSidebarProps {
+  onMenuClick: (type: 'all' | 'article' | 'video') => void;
+  activeType: 'all' | 'article' | 'video';
+}
+
+export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
@@ -19,33 +24,21 @@ export function MainSidebar() {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton>
-              <BookOpen className="h-4 w-4" />
+            <SidebarMenuButton 
+              onClick={() => onMenuClick('article')}
+              isActive={activeType === 'article'}
+            >
+              <Newspaper className="h-4 w-4" />
               <span>Articles</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton>
-              <Podcast className="h-4 w-4" />
-              <span>Podcasts</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton>
+            <SidebarMenuButton 
+              onClick={() => onMenuClick('video')}
+              isActive={activeType === 'video'}
+            >
               <Video className="h-4 w-4" />
               <span>Videos</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton>
-              <Users className="h-4 w-4" />
-              <span>Contributors</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton>
-              <Globe className="h-4 w-4" />
-              <span>Metaverse</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
