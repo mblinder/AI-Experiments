@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { XMLParser } from 'npm:fast-xml-parser';
 
@@ -140,28 +139,62 @@ serve(async (req) => {
         const channelData = await channelResponse.json();
         const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
 
-        // Then fetch videos from the uploads playlist
-        const videoResponse = await fetch(
-          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${uploadsPlaylistId}&key=${YOUTUBE_API_KEY}`
-        );
+        let allVideos = [];
+        let nextPageToken = null;
+        let totalFetched = 0;
+        const maxResults = 50; // Maximum allowed by YouTube API
+        const maxPages = 10; // Fetch up to 500 videos (10 pages * 50 videos)
+        let currentPage = 0;
 
-        if (!videoResponse.ok) {
-          throw new Error(`Failed to fetch videos: ${videoResponse.status}`);
-        }
+        do {
+          console.log(`Fetching YouTube videos page ${currentPage + 1}, nextPageToken:`, nextPageToken);
+          
+          const pageUrl = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+          pageUrl.searchParams.append('part', 'snippet');
+          pageUrl.searchParams.append('maxResults', maxResults.toString());
+          pageUrl.searchParams.append('playlistId', uploadsPlaylistId);
+          pageUrl.searchParams.append('key', YOUTUBE_API_KEY);
+          if (nextPageToken) {
+            pageUrl.searchParams.append('pageToken', nextPageToken);
+          }
 
-        const videoData = await videoResponse.json();
-        console.log(`Found ${videoData.items.length} videos`);
+          const videoResponse = await fetch(pageUrl.toString());
 
-        return videoData.items.map(item => ({
-          id: item.snippet.resourceId.videoId,
-          title: item.snippet.title,
-          description: item.snippet.description || '',
-          type: 'video',
-          imageUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
-          date: new Date(item.snippet.publishedAt).toISOString(),
-          link: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
-          tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
-        }));
+          if (!videoResponse.ok) {
+            throw new Error(`Failed to fetch videos: ${videoResponse.status}`);
+          }
+
+          const videoData = await videoResponse.json();
+          console.log(`Found ${videoData.items.length} videos on page ${currentPage + 1}`);
+
+          const pageVideos = videoData.items.map(item => ({
+            id: item.snippet.resourceId.videoId,
+            title: item.snippet.title,
+            description: item.snippet.description || '',
+            type: 'video',
+            imageUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
+            date: new Date(item.snippet.publishedAt).toISOString(),
+            link: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
+            tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
+          }));
+
+          allVideos = [...allVideos, ...pageVideos];
+          totalFetched += videoData.items.length;
+          nextPageToken = videoData.nextPageToken;
+          currentPage++;
+
+          // Break if we've reached maxPages or there are no more pages
+          if (currentPage >= maxPages || !nextPageToken) {
+            break;
+          }
+
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+        } while (nextPageToken);
+
+        console.log(`Total YouTube videos fetched: ${totalFetched}`);
+        return allVideos;
       } catch (error) {
         console.error('Error fetching YouTube videos:', error);
         console.error(error.stack);
