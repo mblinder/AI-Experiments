@@ -2,10 +2,7 @@
 import { ContentItem } from './types.ts';
 import { createXmlParser, fetchRssFeed } from './rssUtils.ts';
 
-const PODCAST_FEEDS = [
-  'https://thebulwark.substack.com/podcast/87957',  // Public URL for Bulwark podcast
-  'https://thebulwark.substack.com/podcast/87961'   // Public URL for Focus Group podcast
-];
+const PODCAST_FEEDS: string[] = [];
 
 export async function fetchPodcasts(): Promise<ContentItem[]> {
   try {
