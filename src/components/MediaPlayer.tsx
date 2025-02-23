@@ -21,6 +21,7 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
   onMediaClick,
 }) => {
   const [duration, setDuration] = React.useState<number | null>(null);
+  const [isReady, setIsReady] = React.useState(false);
 
   // Format duration to mm:ss or hh:mm:ss
   const formatDuration = (seconds: number): string => {
@@ -48,7 +49,9 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const playerConfig = {
     youtube: {
-      playerVars: { origin: window.location.origin }
+      playerVars: { 
+        origin: window.location.origin,
+      }
     },
     soundcloud: {
       options: {
@@ -69,11 +72,29 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const mediaUrl = type === 'podcast' ? getMediaUrl(link) : link;
 
+  // Hidden player to get duration
+  const renderDurationPlayer = () => {
+    if (type === 'video' && !isReady) {
+      return (
+        <div className="hidden">
+          <ReactPlayer
+            url={mediaUrl}
+            config={playerConfig}
+            onReady={() => setIsReady(true)}
+            onDuration={setDuration}
+          />
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div 
       className={`${type === 'video' ? 'h-48' : 'h-32'} w-full relative cursor-pointer`} 
       onClick={onMediaClick}
     >
+      {renderDurationPlayer()}
       {isPlaying ? (
         <div className="absolute inset-0">
           {link.includes('podcasts.apple.com') ? (
@@ -99,12 +120,12 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
               controls={true}
               playing={isPlaying}
               config={playerConfig}
-              onDuration={(duration) => setDuration(duration)}
+              onDuration={setDuration}
             />
           )}
         </div>
       ) : (
-        <div className="relative w-full h-full">
+        <div className="relative w-full h-full group">
           {imageUrl && (
             <img 
               src={imageUrl} 
@@ -124,7 +145,7 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
             </div>
           </div>
           {type === 'video' && duration && (
-            <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 text-white text-xs rounded">
+            <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 text-white text-xs font-medium rounded shadow">
               {formatDuration(duration)}
             </div>
           )}
