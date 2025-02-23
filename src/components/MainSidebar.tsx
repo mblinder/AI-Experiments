@@ -9,7 +9,7 @@ import {
   SidebarMenuButton,
   useSidebar
 } from "@/components/ui/sidebar"
-import { Newspaper, Video, Headphones, Settings } from "lucide-react"
+import { Newspaper, Video, Settings } from "lucide-react"
 
 interface MainSidebarProps {
   onMenuClick: (type: 'all' | 'article' | 'video' | 'podcast') => void;
@@ -48,19 +48,10 @@ export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton 
               onClick={() => handleMenuItemClick('video')}
-              isActive={activeType === 'video'}
+              isActive={activeType === 'video' || activeType === 'podcast'}
             >
               <Video className="h-4 w-4" />
-              <span>Videos</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              onClick={() => handleMenuItemClick('podcast')}
-              isActive={activeType === 'podcast'}
-            >
-              <Headphones className="h-4 w-4" />
-              <span>Podcasts</span>
+              <span>Videos & Pods</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
