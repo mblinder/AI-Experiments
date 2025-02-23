@@ -30,7 +30,7 @@ export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
   };
 
   return (
-    <Sidebar>
+    <Sidebar side="right">
       <SidebarHeader className="p-4">
         <h2 className="text-lg font-semibold">Menu</h2>
       </SidebarHeader>
