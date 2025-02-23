@@ -67,7 +67,7 @@ const Index = () => {
     initialPageParam: 1
   });
 
-  const allItems = data?.pages?.map(page => page.items).flat() || [];
+  const allItems = data?.pages?.flatMap(page => page.items) || [];
 
   return (
     <SidebarProvider>
@@ -80,7 +80,7 @@ const Index = () => {
               <img 
                 src="/lovable-uploads/fa7cdb76-0bf9-45f8-9906-ca514d9c590b.png"
                 alt="The Bulwark"
-                className="h-8 w-auto"
+                className="h-6 w-auto"
               />
               <SidebarTrigger className="w-8" />
             </div>
