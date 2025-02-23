@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import ReactPlayer from 'react-player';
 import type { ContentTag } from '@/services/contentService';
+import { stripHtmlTags } from '@/utils/mediaUtils';
+import MediaPlayer from './MediaPlayer';
 
 interface ContentCardProps {
   id: string;
@@ -18,13 +19,6 @@ interface ContentCardProps {
   onTagClick: (tagId: string) => void;
   activeTag: string | null;
 }
-
-const stripHtmlTags = (html: string) => {
-  if (!html) return '';
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
-};
 
 const ContentCard = ({ 
   id,
@@ -40,29 +34,8 @@ const ContentCard = ({
 }: ContentCardProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const cleanDescription = React.useMemo(() => {
-    const stripped = stripHtmlTags(description);
-    return stripped;
+    return stripHtmlTags(description);
   }, [description]);
-
-  const getMediaUrl = (url: string): string => {
-    if (url.includes('substack.com')) {
-      return url.replace('/feed/podcast/', '/podcast/player-') + '.mp3';
-    }
-    if (url.includes('podcasts.apple.com')) {
-      const showIdMatch = url.match(/\/id(\d+)/);
-      const episodeIdMatch = url.match(/\?i=(\d+)/);
-      
-      if (showIdMatch && episodeIdMatch) {
-        const showId = showIdMatch[1];
-        const episodeId = episodeIdMatch[1];
-        return `https://embed.podcasts.apple.com/us/podcast/id${showId}?i=${episodeId}`;
-      } else if (showIdMatch) {
-        const showId = showIdMatch[1];
-        return `https://embed.podcasts.apple.com/us/podcast/id${showId}`;
-      }
-    }
-    return url;
-  };
 
   const handleMediaClick = (e: React.MouseEvent) => {
     if (type === 'video' || type === 'podcast') {
@@ -71,109 +44,19 @@ const ContentCard = ({
     }
   };
 
-  const renderMedia = () => {
-    if (type === 'article') {
-      return imageUrl && (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={imageUrl} 
-            alt={title}
-            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      );
-    }
-
-    if (type === 'video' || type === 'podcast') {
-      const playerConfig = {
-        youtube: {
-          playerVars: { origin: window.location.origin }
-        },
-        soundcloud: {
-          options: {
-            sharing: false,
-            download: false
-          }
-        },
-        file: {
-          forceAudio: type === 'podcast',
-          attributes: {
-            style: {
-              width: '100%',
-              height: '100%'
-            }
-          }
-        }
-      };
-
-      const mediaUrl = type === 'podcast' ? getMediaUrl(link) : link;
-
-      return (
-        <div 
-          className={`${type === 'video' ? 'aspect-video' : 'h-[180px]'} w-full relative`} 
-          onClick={handleMediaClick}
-        >
-          {isPlaying ? (
-            <div className="absolute inset-0">
-              {link.includes('podcasts.apple.com') ? (
-                <iframe
-                  src={mediaUrl}
-                  height="175px"
-                  frameBorder="0"
-                  sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                  allow="autoplay *; encrypted-media *; fullscreen *"
-                  style={{
-                    width: '100%',
-                    maxWidth: '100%',
-                    overflow: 'hidden',
-                    borderRadius: '10px',
-                    backgroundColor: 'transparent'
-                  }}
-                />
-              ) : (
-                <ReactPlayer
-                  url={mediaUrl}
-                  width="100%"
-                  height="100%"
-                  controls={true}
-                  playing={isPlaying}
-                  config={playerConfig}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="relative w-full h-full">
-              {imageUrl && (
-                <img 
-                  src={imageUrl} 
-                  alt={title}
-                  className="w-full h-full object-cover cursor-pointer"
-                />
-              )}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 bg-primary/90 rounded-full flex items-center justify-center cursor-pointer hover:bg-primary transition-colors">
-                  <svg 
-                    className="w-8 h-8 text-white" 
-                    fill="currentColor" 
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-  };
-
   return (
     <motion.div whileHover={{ scale: 1.02 }} className="w-full">
       <div className="group">
         <Card className="overflow-hidden backdrop-blur-lg bg-white/90 dark:bg-black/90 border border-gray-200/50 dark:border-gray-800/50 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300">
           <div className="relative">
-            {renderMedia()}
+            <MediaPlayer
+              type={type}
+              imageUrl={imageUrl}
+              link={link}
+              title={title}
+              isPlaying={isPlaying}
+              onMediaClick={handleMediaClick}
+            />
             <Badge 
               className="absolute top-2 right-2 backdrop-blur-md bg-white/80 dark:bg-black/80"
               variant="outline"
