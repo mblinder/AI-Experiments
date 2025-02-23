@@ -51,8 +51,8 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
       throw error;
     }
 
-    // Transform the data to match the ContentItem interface
-    const transformedItems = items.map(item => ({
+    // Transform the data to match the ContentItem interface with proper typing
+    const transformedItems: ContentItem[] = items.map(item => ({
       id: item.id,
       title: item.title,
       description: item.description || '',
@@ -63,7 +63,7 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
       tags: [{
         id: item.source_tag_id || `source-${item.type}`,
         name: item.source_tag_name || item.type,
-        type: 'source'
+        type: 'source' as const // Explicitly type this as a literal 'source'
       }]
     }));
 
