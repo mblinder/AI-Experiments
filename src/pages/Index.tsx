@@ -16,9 +16,12 @@ const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData>({
-    queryKey: ['content'],
+    queryKey: ['content', selectedContentType],
     queryFn: async ({ pageParam = 1 }) => {
-      const response = await fetchContent(pageParam as number);
+      const response = await fetchContent(
+        pageParam as number,
+        selectedContentType
+      );
       return {
         items: response.items,
         nextPage: response.nextPage,
@@ -29,9 +32,9 @@ const Index = () => {
   });
 
   const allItems = data?.pages.flatMap(page => page.items) ?? [];
-  const filteredItems = selectedContentType === 'all' 
-    ? allItems 
-    : allItems.filter(item => item.type === selectedContentType);
+  const filteredItems = activeTag
+    ? allItems.filter(item => item.tags.some(tag => tag.id === activeTag))
+    : allItems;
 
   const handleTagClick = (tagId: string) => {
     setActiveTag(tagId === activeTag ? null : tagId);
@@ -39,6 +42,7 @@ const Index = () => {
 
   const handleMenuClick = (type: 'all' | 'article' | 'video' | 'podcast') => {
     setSelectedContentType(type);
+    setActiveTag(null); // Reset active tag when changing content type
   };
 
   return (

@@ -28,10 +28,12 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export async function fetchContent(page: number): Promise<PagedResponse> {
+export async function fetchContent(page: number, contentType?: string): Promise<PagedResponse> {
   try {
-    const itemsPerPage = 25;
-    const start = (page - 1) * itemsPerPage;
+    const initialPageSize = 25;
+    const subsequentPageSize = 10;
+    const itemsPerPage = page === 1 ? initialPageSize : subsequentPageSize;
+    const start = page === 1 ? 0 : initialPageSize + ((page - 2) * subsequentPageSize);
     const end = start + itemsPerPage - 1;
 
     // First, trigger the feed fetch function to update the database
@@ -39,8 +41,8 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
       body: { updateDb: true },
     });
 
-    // Fetch content items with their associated tags using LEFT JOIN
-    const { data: items, error, count } = await supabase
+    // Build the query
+    let query = supabase
       .from('content_items')
       .select(`
         *,
@@ -52,24 +54,31 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
           )
         )
       `, { count: 'exact' })
-      .order('date', { ascending: false })
-      .range(start, end);
+      .order('date', { ascending: false });
+
+    // Add content type filter if specified
+    if (contentType && contentType !== 'all') {
+      query = query.eq('type', contentType);
+    }
+
+    // Add pagination
+    query = query.range(start, end);
+
+    const { data: items, error, count } = await query;
 
     if (error) {
       console.error('Error fetching content:', error);
       throw error;
     }
 
-    // Transform the data to match the ContentItem interface with proper typing
+    // Transform the data to match the ContentItem interface
     const transformedItems: ContentItem[] = items.map(item => {
-      // Extract tags from the nested structure
       const tags: ContentTag[] = item.content_item_tags?.map((tag: any) => ({
         id: tag.content_tags.id,
         name: tag.content_tags.name,
         type: tag.content_tags.type as ContentTag['type']
       })).filter(Boolean) || [];
 
-      // Add source tag if it exists in the item
       if (item.source_tag_id && item.source_tag_name) {
         tags.push({
           id: item.source_tag_id,
@@ -90,7 +99,9 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
       };
     });
 
-    const hasMore = count ? count > (page * itemsPerPage) : false;
+    const totalItems = count || 0;
+    const currentPosition = start + transformedItems.length;
+    const hasMore = currentPosition < totalItems;
 
     return {
       items: transformedItems,
