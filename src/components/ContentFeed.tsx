@@ -53,6 +53,16 @@ const ContentFeed = ({
     ? items 
     : items.filter(item => item.type === type);
 
+  const LoadingSpinner = () => (
+    <div className="col-span-full flex justify-center p-4">
+      <motion.div 
+        className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+      />
+    </div>
+  );
+
   return (
     <ScrollArea className="h-[calc(100vh-4rem)]">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
@@ -71,11 +81,7 @@ const ContentFeed = ({
             />
           </motion.div>
         ))}
-        {isLoading && (
-          <div className="col-span-full flex justify-center p-4">
-            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-          </div>
-        )}
+        {(isLoading && hasMore) && <LoadingSpinner />}
       </div>
     </ScrollArea>
   );
