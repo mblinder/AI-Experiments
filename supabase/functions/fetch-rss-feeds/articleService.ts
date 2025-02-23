@@ -3,9 +3,9 @@ import { ContentItem } from './types.ts';
 import { createXmlParser, fetchRssFeed } from './rssUtils.ts';
 
 const ARTICLES_FEEDS = [
-  'https://morningshots.substack.com/feed',
-  'https://thetriad.substack.com/feed',
-  'https://huddled-masses.substack.com/feed'
+  'https://morningshots.thebulwark.com/feed',  // Changed back to .thebulwark.com
+  'https://thetriad.thebulwark.com/feed',      // Changed back to .thebulwark.com
+  'https://huddledmasses.thebulwark.com/feed'  // Added .thebulwark.com and fixed typo
 ];
 
 export async function fetchArticles(): Promise<ContentItem[]> {
