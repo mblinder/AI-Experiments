@@ -27,6 +27,20 @@ interface PagedResponse {
 
 type ContentType = Database['public']['Enums']['content_type'];
 
+// Array of placeholder images for articles
+const ARTICLE_PLACEHOLDERS = [
+  'https://images.unsplash.com/photo-1498050108023-c5249f4df085',
+  'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d',
+  'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
+  'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7'
+];
+
+// Get a consistent placeholder image based on the article ID
+function getPlaceholderImage(id: string): string {
+  const index = parseInt(id, 10) % ARTICLE_PLACEHOLDERS.length;
+  return ARTICLE_PLACEHOLDERS[index];
+}
+
 export async function refreshFeeds() {
   console.log('Starting feed refresh...');
   
@@ -106,8 +120,7 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
       if (item.content_type === 'video' && item.videos?.[0]?.thumbnail_url) {
         imageUrl = item.videos[0].thumbnail_url;
       } else if (item.content_type === 'article') {
-        // You might want to add logic here to extract image from article content if needed
-        imageUrl = undefined;
+        imageUrl = getPlaceholderImage(item.id);
       } else if (item.content_type === 'podcast') {
         // You might want to add a default podcast artwork here if needed
         imageUrl = undefined;
