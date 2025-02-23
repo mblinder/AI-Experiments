@@ -4,6 +4,7 @@ import { MainSidebar } from '@/components/MainSidebar';
 import ContentFeed from '@/components/ContentFeed';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Ship } from 'lucide-react';
 
 interface ContentItem {
   id: string;
@@ -67,7 +68,7 @@ const Index = () => {
     initialPageParam: 1
   });
 
-  const allItems = data?.pages?.flatMap(page => page.items) || [];
+  const allItems = data?.pages?.flatMap(page => page.items) ?? [];
 
   return (
     <SidebarProvider>
@@ -76,7 +77,7 @@ const Index = () => {
         <main className="flex-1">
           <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 dark:bg-black/80 border-b border-gray-200/50 dark:border-gray-800/50 h-16">
             <div className="h-full w-full max-w-7xl mx-auto px-4 flex items-center justify-between">
-              <div className="w-8" /> {/* Spacer to help center the logo */}
+              <Ship className="w-6 h-6 text-gray-700 dark:text-gray-300" />
               <img 
                 src="/lovable-uploads/fa7cdb76-0bf9-45f8-9906-ca514d9c590b.png"
                 alt="The Bulwark"
