@@ -72,6 +72,37 @@ const MOCK_PODCASTS: ContentItem[] = [
         type: 'topic'
       }
     ]
+  },
+  {
+    id: '3',
+    title: 'The Focus Group: What Voters Think About Trump\'s Legal Issues',
+    description: 'Sarah Longwell explores voter perspectives on the various legal challenges facing former President Trump and their impact on the upcoming election.',
+    type: 'podcast',
+    imageUrl: 'https://www.thebulwark.com/wp-content/uploads/2023/06/focus-group.jpg',
+    date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
+    link: 'https://www.thebulwark.com/s/fypod',
+    tags: [
+      {
+        id: 'source-focus-group',
+        name: 'The Focus Group',
+        type: 'source'
+      },
+      {
+        id: 'participant-sarah-longwell',
+        name: 'Sarah Longwell',
+        type: 'participant'
+      },
+      {
+        id: 'topic-politics',
+        name: 'Politics',
+        type: 'topic'
+      },
+      {
+        id: 'topic-legal',
+        name: 'Legal',
+        type: 'topic'
+      }
+    ]
   }
 ];
 
