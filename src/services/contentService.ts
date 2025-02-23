@@ -24,14 +24,17 @@ interface PagedResponse {
   nextPage: number | null;
 }
 
-// Initialize Supabase client with fallback to mock data if env vars aren't set
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// Initialize Supabase client
+const supabaseUrl = 'https://pnaskrgaijwmjkbvxlfo.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let supabase: ReturnType<typeof createClient> | null = null;
 
 if (supabaseUrl && supabaseAnonKey) {
   supabase = createClient(supabaseUrl, supabaseAnonKey);
+  console.log('Supabase client initialized');
+} else {
+  console.warn('Missing Supabase configuration');
 }
 
 export async function fetchContent(page: number): Promise<PagedResponse> {
@@ -44,6 +47,7 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
   }
 
   try {
+    console.log('Fetching content from Supabase function...');
     const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
       body: { page },
     });
@@ -53,6 +57,7 @@ export async function fetchContent(page: number): Promise<PagedResponse> {
       throw error;
     }
 
+    console.log('Content fetched successfully:', data);
     return {
       items: data.items,
       nextPage: data.nextPage
