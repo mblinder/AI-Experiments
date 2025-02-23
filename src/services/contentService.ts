@@ -31,7 +31,6 @@ export async function refreshFeeds() {
   console.log('Starting feed refresh...');
   
   try {
-    // Call the edge function to fetch new content
     const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
       body: { 
         updateDb: true
@@ -100,20 +99,35 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
 
     console.log('Fetched items:', items);
 
-    const transformedItems: ContentItem[] = items.map(item => ({
-      id: String(item.id),
-      title: item.title,
-      description: item.description || '',
-      type: item.content_type as ContentItem['type'],
-      imageUrl: item.videos?.[0]?.thumbnail_url || undefined,
-      date: item.published_at,
-      link: item.source_url,
-      tags: item.content_tags?.map((tag: any) => ({
-        id: String(tag.tags.id),
-        name: tag.tags.name,
-        type: tag.tags.type
-      })) || []
-    }));
+    const transformedItems: ContentItem[] = items.map(item => {
+      let imageUrl: string | undefined;
+
+      // Set the imageUrl based on content type
+      if (item.content_type === 'video' && item.videos?.[0]?.thumbnail_url) {
+        imageUrl = item.videos[0].thumbnail_url;
+      } else if (item.content_type === 'article') {
+        // You might want to add logic here to extract image from article content if needed
+        imageUrl = undefined;
+      } else if (item.content_type === 'podcast') {
+        // You might want to add a default podcast artwork here if needed
+        imageUrl = undefined;
+      }
+
+      return {
+        id: String(item.id),
+        title: item.title,
+        description: item.description || '',
+        type: item.content_type as ContentItem['type'],
+        imageUrl,
+        date: item.published_at,
+        link: item.source_url,
+        tags: item.content_tags?.map((tag: any) => ({
+          id: String(tag.tags.id),
+          name: tag.tags.name,
+          type: tag.tags.type
+        })) || []
+      };
+    });
 
     return {
       items: transformedItems,
