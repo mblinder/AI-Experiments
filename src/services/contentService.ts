@@ -84,12 +84,23 @@ export async function fetchContent(page: number, contentType?: string): Promise<
       await checkForNewContent();
     }
 
+    // Modified query to use left join
     let query = supabase
       .from('content_items')
       .select(`
-        *,
-        content_item_tags!inner (
-          content_tags (*)
+        id,
+        title,
+        description,
+        type,
+        image_url,
+        date,
+        link,
+        content_item_tags:content_item_tags (
+          content_tags (
+            id,
+            name,
+            type
+          )
         )
       `)
       .order('date', { ascending: false });
@@ -98,7 +109,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
       query = query.eq('type', contentType);
     }
 
-    const { data: items, error, count } = await query
+    const { data: items, error } = await query
       .range(start, end);
 
     if (error) {
@@ -109,7 +120,7 @@ export async function fetchContent(page: number, contentType?: string): Promise<
     const transformedItems: ContentItem[] = items?.map(item => {
       const tags: ContentTag[] = item.content_item_tags
         ?.map((tag: any) => ({
-          id: tag.content_tags.id,
+          id: tag.content_tags.id.toString(),
           name: tag.content_tags.name,
           type: tag.content_tags.type
         }))
