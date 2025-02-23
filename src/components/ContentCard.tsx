@@ -47,13 +47,12 @@ const ContentCard = ({
 
   const handleTagClick = (e: React.MouseEvent, tagId: string) => {
     e.preventDefault(); // Prevent navigation when clicking tags
-    e.stopPropagation(); // Stop event bubbling
     onTagClick(tagId);
   };
 
   return (
     <motion.div whileHover={{ scale: 1.02 }} className="w-full">
-      <Link to={`/content/${encodeURIComponent(id)}`} className="block group">
+      <Link to={`/content/${id}`} className="block group">
         <Card className="overflow-hidden backdrop-blur-lg bg-white/90 dark:bg-black/90 border border-gray-200/50 dark:border-gray-800/50 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300">
           <div className="relative">
             <MediaPlayer
