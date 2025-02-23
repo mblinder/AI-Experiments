@@ -4,25 +4,42 @@ import ContentCard from '@/components/ContentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 
+interface ContentTag {
+  id: string;
+  name: string;
+  type: 'participant' | 'topic' | 'source';
+}
+
 interface ContentItem {
   id: string;
   title: string;
   description: string;
-  type: 'youtube' | 'substack' | 'podcast';
+  type: 'article' | 'video' | 'podcast';
   imageUrl?: string;
   date: string;
   link: string;
+  tags: ContentTag[];
 }
 
 interface ContentFeedProps {
   items: ContentItem[];
-  type: 'all' | 'youtube' | 'substack' | 'podcast';
+  type: 'all' | 'article' | 'video' | 'podcast';
   hasMore: boolean;
   isLoading: boolean;
   onLoadMore: () => void;
+  onTagClick: (tagId: string) => void;
+  activeTag: string | null;
 }
 
-const ContentFeed = ({ items, type, hasMore, isLoading, onLoadMore }: ContentFeedProps) => {
+const ContentFeed = ({ 
+  items, 
+  type, 
+  hasMore, 
+  isLoading, 
+  onLoadMore,
+  onTagClick,
+  activeTag
+}: ContentFeedProps) => {
   const observer = useRef<IntersectionObserver>();
   const lastItemRef = useCallback((node: HTMLDivElement | null) => {
     if (isLoading) return;
@@ -52,7 +69,11 @@ const ContentFeed = ({ items, type, hasMore, isLoading, onLoadMore }: ContentFee
             transition={{ duration: 0.5, delay: index * 0.1 }}
             ref={index === filteredItems.length - 1 ? lastItemRef : null}
           >
-            <ContentCard {...item} />
+            <ContentCard 
+              {...item} 
+              onTagClick={onTagClick}
+              activeTag={activeTag}
+            />
           </motion.div>
         ))}
         {isLoading && (
