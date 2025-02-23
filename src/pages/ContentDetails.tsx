@@ -9,14 +9,18 @@ import { motion } from 'framer-motion';
 import { fetchContent } from '@/services/contentService';
 
 const ContentDetails = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const decodedId = id ? decodeURIComponent(id) : '';
 
   const { data: contentData, isLoading } = useQuery({
-    queryKey: ['content'],
+    queryKey: ['content', decodedId],
     queryFn: async () => {
       const response = await fetchContent(1); // Fetch first page
-      return response.items.find(item => item.id === id);
-    }
+      const item = response.items.find(item => item.id === decodedId);
+      if (!item) throw new Error('Content not found');
+      return item;
+    },
+    enabled: !!decodedId
   });
 
   if (isLoading) {
