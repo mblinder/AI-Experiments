@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import type { ContentTag } from '@/services/contentService';
 import { stripHtmlTags } from '@/utils/mediaUtils';
 import MediaPlayer from './MediaPlayer';
+import { Link } from 'react-router-dom';
 
 interface ContentCardProps {
   id: string;
@@ -38,15 +39,20 @@ const ContentCard = ({
   }, [description]);
 
   const handleMediaClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation when clicking media player
     if (type === 'video' || type === 'podcast') {
-      e.preventDefault();
       setIsPlaying(!isPlaying);
     }
   };
 
+  const handleTagClick = (e: React.MouseEvent, tagId: string) => {
+    e.preventDefault(); // Prevent navigation when clicking tags
+    onTagClick(tagId);
+  };
+
   return (
     <motion.div whileHover={{ scale: 1.02 }} className="w-full">
-      <div className="group">
+      <Link to={`/content/${id}`} className="block group">
         <Card className="overflow-hidden backdrop-blur-lg bg-white/90 dark:bg-black/90 border border-gray-200/50 dark:border-gray-800/50 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300">
           <div className="relative">
             <MediaPlayer
@@ -75,10 +81,7 @@ const ContentCard = ({
                   key={tag.id}
                   variant={activeTag === tag.id ? "default" : "outline"}
                   className="cursor-pointer hover:bg-primary/90"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onTagClick(tag.id);
-                  }}
+                  onClick={(e) => handleTagClick(e, tag.id)}
                 >
                   {tag.name}
                 </Badge>
@@ -93,7 +96,7 @@ const ContentCard = ({
             </time>
           </div>
         </Card>
-      </div>
+      </Link>
     </motion.div>
   );
 };
