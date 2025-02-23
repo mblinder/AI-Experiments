@@ -7,12 +7,11 @@ const corsHeaders = {
 };
 
 const ARTICLES_FEEDS = [
-  'http://thetriad.substack.com/feed',
-  'http://morningshots.substack.com/feed'
+  'https://thetriad.thebulwark.com/feed',
+  'https://morningshots.thebulwark.com/feed'
 ];
-const PODCAST_FEED_URL = 'https://feeds.megaphone.fm/TPW1449071235';
 
-// Bulwark Media channel ID
+const PODCAST_FEED_URL = 'https://feeds.megaphone.fm/TPW1449071235';
 const YOUTUBE_CHANNEL_ID = 'UCG4Hp1KbGw4e02N7FpPXDgQ';
 
 serve(async (req) => {
@@ -57,23 +56,29 @@ serve(async (req) => {
             
             const result = parser.parse(xmlData);
             console.log('Articles feed parsed:', result?.rss?.channel?.title);
+            
             const items = result?.rss?.channel?.item || [];
-            return items.map(item => ({
-              id: item.guid || item.link,
-              title: item.title,
-              description: item.description?.toString() || '',
-              type: 'article',
-              imageUrl: item.enclosure?.['@_url'] || 
-                       item['media:content']?.['@_url'] || 
-                       item['media:thumbnail']?.['@_url'],
-              date: new Date(item.pubDate).toISOString(),
-              link: item.link,
-              tags: [{ 
-                id: 'source-article', 
-                name: feedUrl.includes('thetriad') ? 'The Triad' : 'Morning Shots', 
-                type: 'source' 
-              }]
-            }));
+            return items.map(item => {
+              // Extract content from either 'content:encoded' or 'description'
+              const content = item['content:encoded'] || item.description;
+              
+              return {
+                id: item.guid || item.link,
+                title: item.title,
+                description: content?.toString() || '',
+                type: 'article',
+                imageUrl: item.enclosure?.['@_url'] || 
+                         item['media:content']?.['@_url'] || 
+                         item['media:thumbnail']?.['@_url'],
+                date: new Date(item.pubDate).toISOString(),
+                link: item.link,
+                tags: [{ 
+                  id: 'source-article', 
+                  name: feedUrl.includes('thetriad') ? 'The Triad' : 'Morning Shots', 
+                  type: 'source' 
+                }]
+              };
+            });
           })
         );
         return allArticles.flat();
