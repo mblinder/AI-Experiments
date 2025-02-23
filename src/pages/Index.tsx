@@ -5,7 +5,22 @@ import ContentFeed from '@/components/ContentFeed';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
-// Temporary mock data - replace with actual API calls
+interface ContentItem {
+  id: string;
+  title: string;
+  description: string;
+  type: 'youtube' | 'substack' | 'podcast';
+  imageUrl?: string;
+  date: string;
+  link: string;
+}
+
+interface PageData {
+  items: ContentItem[];
+  nextPage: number | undefined;
+}
+
+// Temporary mock data
 const mockData = [
   {
     id: '1',
@@ -39,7 +54,7 @@ const mockData = [
 const Index = () => {
   const [activeTab, setActiveTab] = useState('all');
 
-  const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery({
+  const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData>({
     queryKey: ['content'],
     queryFn: async ({ pageParam = 1 }) => {
       // This would be replaced with actual API calls to fetch content
@@ -49,6 +64,7 @@ const Index = () => {
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
+    initialPageParam: 1
   });
 
   const allItems = data?.pages.flatMap(page => page.items) || [];
