@@ -17,27 +17,17 @@ export async function fetchArticles(): Promise<ContentItem[]> {
         
         try {
           const xmlData = await fetchRssFeed(feedUrl);
-          console.log(`Article feed data length for ${feedUrl}:`, xmlData.length);
-          
           const result = parser.parse(xmlData);
-          console.log('Article feed parsed:', result?.rss?.channel?.title);
           
           const items = result?.rss?.channel?.item || [];
           return items.map(item => {
-            // First try to get content from content:encoded, then description
-            let content = '';
-            if (item['content:encoded']) {
-              content = item['content:encoded'].toString();
-            } else if (item.description) {
-              content = item.description.toString();
-            }
-            
-            console.log('Content length for article:', content.length);
+            const description = item['content:encoded']?.toString() || 
+                              item.description?.toString() || '';
             
             return {
               id: item.guid || item.link,
               title: item.title,
-              description: content,
+              description: description,
               type: 'article',
               imageUrl: item.enclosure?.['@_url'] || 
                        item['media:content']?.['@_url'] || 
