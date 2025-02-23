@@ -18,158 +18,53 @@ serve(async (req) => {
   try {
     console.log('Starting to fetch all content...');
     
-    // Initialize Supabase client first
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Parse request body
-    const { updateDb = false } = await req.json();
+    const { updateDb = false, since = null } = await req.json();
     
-    // Get the last fetch timestamp from global config
-    const { data: configData, error: configError } = await supabase
-      .from('global_config')
-      .select('value')
-      .eq('key', 'last_feed_fetch')
-      .single();
-
-    if (configError) {
-      console.error('Error fetching last_feed_fetch:', configError);
-    }
-
-    const since = configData?.value?.timestamp || null;
-    console.log('Last fetch timestamp:', since);
-
-    // Check if YouTube API key exists
-    const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY');
-    console.log('YouTube API Key exists:', !!youtubeApiKey);
-
     const [articles, podcasts, videos] = await Promise.all([
       fetchArticles(since),
       fetchPodcasts(since),
       fetchYouTubeVideos(since)
     ]);
 
-    console.log('Fetched content counts:', {
-      articles: articles?.length || 0,
-      podcasts: podcasts?.length || 0,
-      videos: videos?.length || 0
-    });
+    const allItems = [...articles, ...podcasts, ...videos].map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      type: item.type,
+      image_url: item.imageUrl,
+      date: item.date,
+      link: item.link,
+      source_tag_id: item.tags[0]?.id,
+      source_tag_name: item.tags[0]?.name,
+    }));
 
-    let processedItems = 0;
-
-    if (updateDb) {
-      console.log('Processing content items...');
+    if (updateDb && allItems.length > 0) {
+      console.log(`Found ${allItems.length} new items to update`);
       
-      // Process articles
-      if (articles && articles.length > 0) {
-        for (const article of articles) {
-          const { error: contentError } = await supabase
-            .from('content_items')
-            .insert({
-              title: article.title,
-              description: article.description,
-              source_url: article.link,
-              content_type: 'article',
-              published_at: article.date
-            })
-            .select()
-            .single();
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
-          if (contentError) {
-            console.error('Error inserting article:', contentError);
-            continue;
-          }
+      // Insert new items
+      const { error } = await supabase
+        .from('content_items')
+        .upsert(allItems, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
 
-          processedItems++;
-        }
+      if (error) {
+        console.error('Error upserting items:', error);
+        throw error;
       }
 
-      // Process podcasts
-      if (podcasts && podcasts.length > 0) {
-        for (const podcast of podcasts) {
-          const { error: contentError } = await supabase
-            .from('content_items')
-            .insert({
-              title: podcast.title,
-              description: podcast.description,
-              source_url: podcast.link,
-              content_type: 'podcast',
-              published_at: podcast.date
-            })
-            .select()
-            .single();
-
-          if (contentError) {
-            console.error('Error inserting podcast:', contentError);
-            continue;
-          }
-
-          processedItems++;
-        }
-      }
-
-      // Process videos
-      if (videos && videos.length > 0) {
-        for (const video of videos) {
-          console.log('Processing video:', video.title);
-          
-          const { data: contentData, error: contentError } = await supabase
-            .from('content_items')
-            .insert({
-              title: video.title,
-              description: video.description,
-              source_url: video.link,
-              content_type: 'video',
-              published_at: video.date
-            })
-            .select()
-            .single();
-
-          if (contentError) {
-            console.error('Error inserting video:', contentError);
-            continue;
-          }
-
-          if (contentData) {
-            const { error: videoError } = await supabase
-              .from('videos')
-              .insert({
-                content_id: contentData.id,
-                video_url: video.link,
-                thumbnail_url: video.thumbnail,
-                duration: video.duration
-              });
-
-            if (videoError) {
-              console.error('Error inserting video details:', videoError);
-              continue;
-            }
-
-            processedItems++;
-          }
-        }
-      }
-
-      // Update the last fetch timestamp
-      const { error: updateError } = await supabase
-        .from('global_config')
-        .update({ 
-          value: { timestamp: new Date().toISOString() },
-          updated_at: new Date().toISOString()
-        })
-        .eq('key', 'last_feed_fetch');
-
-      if (updateError) {
-        console.error('Error updating last fetch timestamp:', updateError);
-      }
+      console.log(`Successfully processed ${allItems.length} items`);
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        itemsProcessed: processedItems
-      }),
+      JSON.stringify({ success: true, itemsProcessed: allItems.length }),
       { 
         headers: {
           ...corsHeaders,

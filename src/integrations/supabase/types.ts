@@ -9,241 +9,101 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      articles: {
+      content_item_tags: {
         Row: {
-          author: string | null
-          content: string
-          content_id: number
-          id: number
+          content_item_id: string
+          created_at: string | null
+          tag_id: string
         }
         Insert: {
-          author?: string | null
-          content: string
-          content_id: number
-          id?: number
+          content_item_id: string
+          created_at?: string | null
+          tag_id: string
         }
         Update: {
-          author?: string | null
-          content?: string
-          content_id?: number
-          id?: number
+          content_item_id?: string
+          created_at?: string | null
+          tag_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "articles_content_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: true
+            foreignKeyName: "content_item_tags_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
             referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_item_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "content_tags"
             referencedColumns: ["id"]
           },
         ]
       }
       content_items: {
         Row: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at: string
+          created_at: string | null
+          date: string
           description: string | null
-          id: number
-          published_at: string
-          source_url: string
+          id: string
+          image_url: string | null
+          link: string
+          source_tag_id: string | null
+          source_tag_name: string | null
           title: string
-          updated_at: string
+          type: string
+          updated_at: string | null
         }
         Insert: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at?: string
+          created_at?: string | null
+          date: string
           description?: string | null
-          id?: number
-          published_at: string
-          source_url: string
+          id: string
+          image_url?: string | null
+          link: string
+          source_tag_id?: string | null
+          source_tag_name?: string | null
           title: string
-          updated_at?: string
+          type: string
+          updated_at?: string | null
         }
         Update: {
-          content_type?: Database["public"]["Enums"]["content_type"]
-          created_at?: string
+          created_at?: string | null
+          date?: string
           description?: string | null
-          id?: number
-          published_at?: string
-          source_url?: string
+          id?: string
+          image_url?: string | null
+          link?: string
+          source_tag_id?: string | null
+          source_tag_name?: string | null
           title?: string
-          updated_at?: string
+          type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       content_tags: {
         Row: {
-          content_id: number
-          created_at: string
-          tag_id: number
-        }
-        Insert: {
-          content_id: number
-          created_at?: string
-          tag_id: number
-        }
-        Update: {
-          content_id?: number
-          created_at?: string
-          tag_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "content_tags_content_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: false
-            referencedRelation: "content_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "content_tags_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "tags"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      global_config: {
-        Row: {
-          key: string
-          updated_at: string
-          value: Json
-        }
-        Insert: {
-          key: string
-          updated_at?: string
-          value: Json
-        }
-        Update: {
-          key?: string
-          updated_at?: string
-          value?: Json
-        }
-        Relationships: []
-      }
-      people: {
-        Row: {
-          avatar_url: string | null
-          bio: string | null
-          content_id: number
-          full_name: string
-          id: number
-          social_links: Json | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          content_id: number
-          full_name: string
-          id?: number
-          social_links?: Json | null
-        }
-        Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          content_id?: number
-          full_name?: string
-          id?: number
-          social_links?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "people_content_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: true
-            referencedRelation: "content_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      podcasts: {
-        Row: {
-          audio_url: string
-          content_id: number
-          duration: number | null
-          episode_number: number | null
-          id: number
-          season_number: number | null
-        }
-        Insert: {
-          audio_url: string
-          content_id: number
-          duration?: number | null
-          episode_number?: number | null
-          id?: number
-          season_number?: number | null
-        }
-        Update: {
-          audio_url?: string
-          content_id?: number
-          duration?: number | null
-          episode_number?: number | null
-          id?: number
-          season_number?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "podcasts_content_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: true
-            referencedRelation: "content_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tags: {
-        Row: {
-          created_at: string
-          id: number
+          created_at: string | null
+          id: string
           name: string
           type: string
         }
         Insert: {
-          created_at?: string
-          id?: number
+          created_at?: string | null
+          id: string
           name: string
           type: string
         }
         Update: {
-          created_at?: string
-          id?: number
+          created_at?: string | null
+          id?: string
           name?: string
           type?: string
         }
         Relationships: []
-      }
-      videos: {
-        Row: {
-          content_id: number
-          duration: number | null
-          id: number
-          thumbnail_url: string | null
-          video_url: string
-        }
-        Insert: {
-          content_id: number
-          duration?: number | null
-          id?: number
-          thumbnail_url?: string | null
-          video_url: string
-        }
-        Update: {
-          content_id?: number
-          duration?: number | null
-          id?: number
-          thumbnail_url?: string | null
-          video_url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "videos_content_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: true
-            referencedRelation: "content_items"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
@@ -253,7 +113,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      content_type: "article" | "video" | "podcast" | "person"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never

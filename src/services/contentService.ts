@@ -1,6 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
-import { toast } from 'sonner';
+
+import { createClient } from '@supabase/supabase-js';
 
 export interface ContentTag {
   id: string;
@@ -24,154 +23,131 @@ interface PagedResponse {
   nextPage: number | null;
 }
 
-type ContentType = Database['public']['Enums']['content_type'];
+const supabaseUrl = 'https://pnaskrgaijwmjkbvxlfo.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuYXNrcmdhaWp3bWprYnZ4bGZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzMDIzMjMsImV4cCI6MjA1NTg3ODMyM30.jpwQ5ENqgZVRg7LSpMt0fvrVVAu7cwOU7GkjaGCWKDA';
 
-// Function to extract first image URL from HTML content
-function extractImageFromContent(htmlContent: string): string | undefined {
-  if (!htmlContent) return undefined;
-  
-  // Create a temporary DOM element
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = htmlContent;
-  
-  // Find the first image
-  const firstImage = tempDiv.querySelector('img');
-  
-  // Return the src attribute if an image is found
-  return firstImage?.getAttribute('src') || undefined;
-}
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export async function refreshFeeds() {
-  console.log('Starting feed refresh...');
-  
+// Reduce initial page size for faster first load
+const INITIAL_PAGE_SIZE = 10;
+const SUBSEQUENT_PAGE_SIZE = 10;
+const UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+let lastUpdateTime = 0;
+
+async function checkForNewContent() {
+  const now = Date.now();
+  // Only check for new content every 5 minutes
+  if (now - lastUpdateTime < UPDATE_INTERVAL) {
+    return;
+  }
+
   try {
-    const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
-      body: { 
-        updateDb: true
-      }
-    });
-    
-    if (error) {
-      console.error('Error refreshing feeds:', error);
-      toast.error('Failed to refresh feeds');
-      throw error;
+    // Get the most recent item's date
+    const { data: latestItem } = await supabase
+      .from('content_items')
+      .select('date')
+      .order('date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (latestItem) {
+      // Trigger background update if we have items
+      console.log('Checking for new content since:', new Date(latestItem.date).toISOString());
+      supabase.functions.invoke('fetch-rss-feeds', {
+        body: { 
+          updateDb: true,
+          since: latestItem.date 
+        },
+      }).catch(console.error);
+    } else {
+      // If no items exist, do a full fetch
+      console.log('No existing content, performing full fetch');
+      supabase.functions.invoke('fetch-rss-feeds', {
+        body: { updateDb: true },
+      }).catch(console.error);
     }
     
-    console.log('Feed refresh completed:', data);
-    toast.success('Feeds refreshed successfully');
-    return data;
+    lastUpdateTime = now;
   } catch (error) {
-    console.error('Failed to refresh feeds:', error);
-    toast.error('Failed to refresh feeds');
-    throw error;
+    console.error('Error checking for new content:', error);
   }
 }
 
-export async function fetchContent(page: number, contentType?: ContentType | 'all'): Promise<PagedResponse> {
+export async function fetchContent(page: number, contentType?: string): Promise<PagedResponse> {
   try {
-    console.log('Fetching content with params:', { page, contentType });
-    
+    const itemsPerPage = page === 1 ? INITIAL_PAGE_SIZE : SUBSEQUENT_PAGE_SIZE;
+    const start = page === 1 ? 0 : INITIAL_PAGE_SIZE + ((page - 2) * SUBSEQUENT_PAGE_SIZE);
+    const end = start + itemsPerPage - 1;
+
+    // Only check for updates on first page load
+    if (page === 1) {
+      await checkForNewContent();
+    }
+
     let query = supabase
       .from('content_items')
       .select(`
-        *,
-        articles (
-          content
-        ),
-        videos (
-          video_url,
-          thumbnail_url,
-          duration
-        ),
-        podcasts (
-          audio_url,
-          duration,
-          episode_number,
-          season_number
-        ),
-        content_tags (
-          tags (
+        id,
+        title,
+        description,
+        type,
+        image_url,
+        date,
+        link,
+        content_item_tags:content_item_tags (
+          content_tags (
             id,
             name,
             type
           )
         )
-      `)
-      .order('published_at', { ascending: false });
+      `, { count: 'exact' })
+      .order('date', { ascending: false })
+      .order('id', { ascending: false });
 
     if (contentType && contentType !== 'all') {
-      query = query.eq('content_type', contentType);
+      query = query.eq('type', contentType);
     }
 
-    const { data: items, error } = await query;
+    query = query.range(start, end);
+
+    const { data: items, error, count } = await query;
 
     if (error) {
       console.error('Error fetching content:', error);
-      toast.error('Failed to fetch content');
       throw error;
     }
 
-    console.log('Fetched items:', items);
+    const transformedItems: ContentItem[] = items.map(item => {
+      const tags: ContentTag[] = item.content_item_tags?.map((tag: any) => ({
+        id: tag.content_tags.id,
+        name: tag.content_tags.name,
+        type: tag.content_tags.type as ContentTag['type']
+      })).filter(Boolean) || [];
 
-    const transformedItems: ContentItem[] = items
-      // Filter out non-Bulwark videos
-      .filter(item => {
-        if (item.content_type === 'video') {
-          return item.source_url.includes('bulwark');
-        }
-        return true;
-      })
-      .map(item => {
-        let imageUrl: string | undefined;
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        type: item.type as 'article' | 'video' | 'podcast',
+        imageUrl: item.image_url,
+        date: item.date,
+        link: item.link,
+        tags
+      };
+    });
 
-        // Set the imageUrl based on content type
-        if (item.content_type === 'video' && item.videos?.[0]?.thumbnail_url) {
-          imageUrl = item.videos[0].thumbnail_url;
-        } else if (item.content_type === 'article' && item.articles?.[0]?.content) {
-          // Extract image from article content
-          imageUrl = extractImageFromContent(item.articles[0].content);
-        } else if (item.content_type === 'podcast') {
-          // You might want to add a default podcast artwork here if needed
-          imageUrl = undefined;
-        }
-
-        return {
-          id: String(item.id),
-          title: item.title,
-          description: item.description || '',
-          type: item.content_type as ContentItem['type'],
-          imageUrl,
-          date: item.published_at,
-          link: item.source_url,
-          tags: item.content_tags?.map((tag: any) => ({
-            id: String(tag.tags.id),
-            name: tag.tags.name,
-            type: tag.tags.type
-          })) || []
-        };
-      });
+    const totalItems = count || 0;
+    const currentPosition = start + transformedItems.length;
+    const hasMore = currentPosition < totalItems;
 
     return {
       items: transformedItems,
-      nextPage: null
+      nextPage: hasMore ? page + 1 : null
     };
   } catch (error) {
-    console.error('Error in fetchContent:', error);
-    toast.error('Failed to fetch content');
+    console.error('Error fetching content:', error);
     throw error;
   }
 }
-
-// Create and expose the content service immediately
-const contentService = {
-  refreshFeeds,
-  fetchContent
-};
-
-// Expose to window object
-if (typeof window !== 'undefined') {
-  (window as any).contentService = contentService;
-}
-
-// Export for use in components
-export default contentService;

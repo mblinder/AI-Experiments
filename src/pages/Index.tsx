@@ -4,10 +4,8 @@ import { MainSidebar } from '@/components/MainSidebar';
 import ContentFeed from '@/components/ContentFeed';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { fetchContent, refreshFeeds, type ContentItem, type ContentTag } from '@/services/contentService';
+import { fetchContent, type ContentItem, type ContentTag } from '@/services/contentService';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { RotateCw } from 'lucide-react';
 
 interface PageData {
   items: ContentItem[];
@@ -17,9 +15,8 @@ interface PageData {
 const Index = () => {
   const [selectedContentType, setSelectedContentType] = useState<'all' | 'article' | 'video' | 'podcast'>('all');
   const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data, isLoading, hasNextPage, fetchNextPage, refetch } = useInfiniteQuery<PageData>({
+  const { data, isLoading, hasNextPage, fetchNextPage } = useInfiniteQuery<PageData>({
     queryKey: ['content', selectedContentType],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await fetchContent(
@@ -34,16 +31,6 @@ const Index = () => {
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1
   });
-
-  const handleRefresh = async () => {
-    try {
-      setIsRefreshing(true);
-      await refreshFeeds();
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   const allItems = data?.pages.flatMap(page => page.items) ?? [];
   const filteredItems = activeTag
@@ -79,24 +66,13 @@ const Index = () => {
                   className="w-6 h-6"
                 />
               </Link>
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                >
-                  <RotateCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh Feeds'}
-                </Button>
-                <Link to="/" className="hover:opacity-80 transition-opacity" onClick={handleLogoClick}>
-                  <img 
-                    src="/lovable-uploads/fa7cdb76-0bf9-45f8-9906-ca514d9c590b.png"
-                    alt="The Bulwark"
-                    className="h-6 w-auto"
-                  />
-                </Link>
-              </div>
+              <Link to="/" className="hover:opacity-80 transition-opacity" onClick={handleLogoClick}>
+                <img 
+                  src="/lovable-uploads/fa7cdb76-0bf9-45f8-9906-ca514d9c590b.png"
+                  alt="The Bulwark"
+                  className="h-6 w-auto"
+                />
+              </Link>
               <SidebarTrigger className="w-8" />
             </div>
           </header>
