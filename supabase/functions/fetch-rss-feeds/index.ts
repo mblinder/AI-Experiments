@@ -8,8 +8,10 @@ const corsHeaders = {
 };
 
 const PODCAST_FEEDS = [
-  'https://api.substack.com/feed/podcast/87281/s/87957/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss',
-  'https://api.substack.com/feed/podcast/87281/s/87961/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss'
+  'https://feeds.megaphone.fm/focusgroup',  // The Focus Group
+  'https://feeds.megaphone.fm/TPW1449071235', // The Bulwark Podcast
+  'https://feed.podbean.com/bulwarktakes/feed.xml', // Bulwark Takes
+  'https://feed.podbean.com/fypod/feed.xml'  // FYPod
 ];
 
 // Bulwark Media channel ID
