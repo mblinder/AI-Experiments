@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ContentTag {
   id: string;
@@ -11,7 +11,6 @@ export interface ContentItem {
   id: string;
   title: string;
   description: string;
-  content: string;
   type: 'article' | 'video' | 'podcast';
   imageUrl?: string;
   date: string;
@@ -24,73 +23,25 @@ interface PagedResponse {
   nextPage: number | null;
 }
 
-const supabaseUrl = 'https://pnaskrgaijwmjkbvxlfo.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuYXNrcmdhaWp3bWprYnZ4bGZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzMDIzMjMsImV4cCI6MjA1NTg3ODMyM30.jpwQ5ENqgZVRg7LSpMt0fvrVVAu7cwOU7GkjaGCWKDA';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const INITIAL_PAGE_SIZE = 10;
-const SUBSEQUENT_PAGE_SIZE = 10;
-const UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
-let lastUpdateTime = 0;
-
-async function checkForNewContent() {
-  const now = Date.now();
-  if (now - lastUpdateTime < UPDATE_INTERVAL) {
-    return;
-  }
-
-  try {
-    const { data: latestItem } = await supabase
-      .from('content_items')
-      .select('published_at')
-      .order('published_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (latestItem) {
-      console.log('Checking for new content since:', new Date(latestItem.published_at).toISOString());
-      supabase.functions.invoke('fetch-rss-feeds', {
-        body: { 
-          updateDb: true,
-          since: latestItem.published_at 
-        },
-      }).catch(console.error);
-    } else {
-      console.log('No existing content, performing full fetch');
-      supabase.functions.invoke('fetch-rss-feeds', {
-        body: { updateDb: true },
-      }).catch(console.error);
-    }
-    
-    lastUpdateTime = now;
-  } catch (error) {
-    console.error('Error checking for new content:', error);
-  }
-}
-
 export async function fetchContent(page: number, contentType?: string): Promise<PagedResponse> {
   try {
-    const itemsPerPage = page === 1 ? INITIAL_PAGE_SIZE : SUBSEQUENT_PAGE_SIZE;
-    const start = page === 1 ? 0 : INITIAL_PAGE_SIZE + ((page - 2) * SUBSEQUENT_PAGE_SIZE);
-    const end = start + itemsPerPage - 1;
-
-    if (page === 1) {
-      await checkForNewContent();
-    }
-
     let query = supabase
       .from('content_items')
       .select(`
-        id,
-        title,
-        description,
-        content_type,
-        source_url,
-        published_at,
+        *,
         articles (
           content
+        ),
+        videos (
+          video_url,
+          thumbnail_url,
+          duration
+        ),
+        podcasts (
+          audio_url,
+          duration,
+          episode_number,
+          season_number
         ),
         content_tags (
           tags (
@@ -99,52 +50,41 @@ export async function fetchContent(page: number, contentType?: string): Promise<
             type
           )
         )
-      `, { count: 'exact' })
-      .order('published_at', { ascending: false })
-      .order('id', { ascending: false });
+      `)
+      .order('published_at', { ascending: false });
 
     if (contentType && contentType !== 'all') {
       query = query.eq('content_type', contentType);
     }
 
-    query = query.range(start, end);
-
-    const { data: items, error, count } = await query;
+    const { data: items, error } = await query;
 
     if (error) {
       console.error('Error fetching content:', error);
       throw error;
     }
 
-    const transformedItems: ContentItem[] = items.map(item => {
-      const tags: ContentTag[] = item.content_tags?.map((tag: any) => ({
+    const transformedItems: ContentItem[] = items.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.description || '',
+      type: item.content_type,
+      imageUrl: item.videos?.[0]?.thumbnail_url || undefined,
+      date: item.published_at,
+      link: item.source_url,
+      tags: item.content_tags?.map((tag: any) => ({
         id: tag.tags.id,
         name: tag.tags.name,
-        type: tag.tags.type as ContentTag['type']
-      })).filter(Boolean) || [];
-
-      return {
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        content: item.articles?.[0]?.content || item.description || '',
-        type: item.content_type,
-        date: item.published_at,
-        link: item.source_url,
-        tags
-      };
-    });
-
-    const totalItems = count || 0;
-    const currentPosition = start + transformedItems.length;
-    const hasMore = currentPosition < totalItems;
+        type: tag.tags.type
+      })) || []
+    }));
 
     return {
       items: transformedItems,
-      nextPage: hasMore ? page + 1 : null
+      nextPage: null // We're not implementing pagination in this version
     };
   } catch (error) {
-    console.error('Error fetching content:', error);
+    console.error('Error in fetchContent:', error);
     throw error;
   }
 }
