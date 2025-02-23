@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -10,11 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 const ContentDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const decodedId = id ? decodeURIComponent(id) : '';
+  const decodedId = id ? parseInt(decodeURIComponent(id), 10) : null;
 
   const { data: contentData, isLoading } = useQuery({
     queryKey: ['content', decodedId],
     queryFn: async () => {
+      if (!decodedId) throw new Error('Invalid ID');
+
       const { data: item, error } = await supabase
         .from('content_items')
         .select(`
