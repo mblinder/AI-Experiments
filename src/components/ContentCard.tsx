@@ -4,12 +4,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-
-interface ContentTag {
-  id: string;
-  name: string;
-  type: 'participant' | 'topic' | 'source';
-}
+import type { ContentTag } from '@/services/contentService';
 
 interface ContentCardProps {
   id: string;

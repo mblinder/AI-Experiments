@@ -4,8 +4,7 @@ import { MainSidebar } from '@/components/MainSidebar';
 import ContentFeed from '@/components/ContentFeed';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { fetchContent } from '@/services/contentService';
-import type { ContentItem, ContentTag } from '@/services/contentService';
+import { fetchContent, type ContentItem, type ContentTag } from '@/services/contentService';
 
 interface PageData {
   items: ContentItem[];
