@@ -29,7 +29,6 @@ serve(async (req) => {
     const { page = 1 } = await req.json();
     console.log('Fetching content for page:', page);
 
-    // Configure XML parser
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',
@@ -41,7 +40,6 @@ serve(async (req) => {
       cdataPositionChar: '\\c'
     });
 
-    // Fetch and parse articles feeds
     console.log('Starting to fetch articles feeds...');
     const fetchArticles = async () => {
       try {
@@ -70,7 +68,7 @@ serve(async (req) => {
               imageUrl: item.enclosure?.['@_url'] || 
                        item['media:content']?.['@_url'] || 
                        item['media:thumbnail']?.['@_url'],
-              date: item.pubDate || new Date().toISOString(),
+              date: new Date(item.pubDate).toISOString(),
               link: item.link,
               tags: [{ 
                 id: 'source-article', 
@@ -80,8 +78,6 @@ serve(async (req) => {
             }));
           })
         );
-        
-        // Flatten the array of arrays into a single array of articles
         return allArticles.flat();
       } catch (error) {
         console.error(`Error fetching articles feeds:`, error);
@@ -89,7 +85,6 @@ serve(async (req) => {
       }
     };
 
-    // Fetch and parse podcast feed
     console.log('Starting to fetch podcast feed...');
     const fetchPodcasts = async () => {
       try {
@@ -116,7 +111,7 @@ serve(async (req) => {
           imageUrl: item['itunes:image']?.['@_href'] || 
                    item.image?.url || 
                    result?.rss?.channel?.['itunes:image']?.['@_href'],
-          date: item.pubDate || new Date().toISOString(),
+          date: new Date(item.pubDate).toISOString(),
           link: item.link,
           tags: [{ id: 'source-podcast', name: 'Podcast', type: 'source' }]
         }));
@@ -126,7 +121,6 @@ serve(async (req) => {
       }
     };
 
-    // Fetch and parse YouTube feed
     console.log('Starting to fetch YouTube feed...');
     const fetchYouTubeVideos = async () => {
       try {
@@ -150,7 +144,7 @@ serve(async (req) => {
           description: item.summary?.__cdata || item.summary || '',
           type: 'video',
           imageUrl: item['media:group']?.['media:thumbnail']?.['@_url'] || item['media:thumbnail']?.['@_url'] || '',
-          date: item.published,
+          date: new Date(item.published).toISOString(), // Ensure consistent date format
           link: item.link?.['@_href'] || item.link,
           tags: [{ id: 'source-video', name: 'Video', type: 'source' }]
         }));
@@ -168,33 +162,37 @@ serve(async (req) => {
     ]);
     console.log('All feeds fetched successfully');
 
-    // Process items
-    console.log('Processing all items...');
-    console.log('Number of articles:', articles.length);
-    console.log('Number of podcasts:', podcasts.length);
-    console.log('Number of videos:', videos.length);
+    // Process items and ensure dates are properly parsed
+    const allItems = [...articles, ...podcasts, ...videos].map(item => ({
+      ...item,
+      date: new Date(item.date).toISOString() // Normalize all dates to ISO string format
+    }));
 
-    // Combine and sort all items
-    const allItems = [...articles, ...podcasts, ...videos].sort((a, b) => 
+    // Sort all items by date
+    const sortedItems = allItems.sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
-    console.log(`Total items found: ${allItems.length}`);
+    console.log(`Total items found: ${sortedItems.length}`);
+    console.log('Sample of dates to verify sorting:');
+    sortedItems.slice(0, 5).forEach(item => {
+      console.log(`${item.type} - ${item.date} - ${item.title}`);
+    });
 
     // Implement pagination
     const itemsPerPage = 10;
     const startIndex = (page - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const paginatedItems = allItems.slice(startIndex, endIndex);
+    const paginatedItems = sortedItems.slice(startIndex, endIndex);
     
-    const hasMorePages = endIndex < allItems.length;
+    const hasMorePages = endIndex < sortedItems.length;
     
     console.log('Sending response with items:', paginatedItems.length);
     return new Response(
       JSON.stringify({
         items: paginatedItems,
         nextPage: hasMorePages ? page + 1 : null,
-        total: allItems.length
+        total: sortedItems.length
       }),
       { 
         headers: {
