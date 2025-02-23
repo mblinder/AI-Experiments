@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
@@ -27,18 +26,19 @@ interface PagedResponse {
 
 type ContentType = Database['public']['Enums']['content_type'];
 
-// Array of placeholder images for articles
-const ARTICLE_PLACEHOLDERS = [
-  'https://images.unsplash.com/photo-1498050108023-c5249f4df085',
-  'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d',
-  'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
-  'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7'
-];
-
-// Get a consistent placeholder image based on the article ID
-function getPlaceholderImage(id: string): string {
-  const index = parseInt(id, 10) % ARTICLE_PLACEHOLDERS.length;
-  return ARTICLE_PLACEHOLDERS[index];
+// Function to extract first image URL from HTML content
+function extractImageFromContent(htmlContent: string): string | undefined {
+  if (!htmlContent) return undefined;
+  
+  // Create a temporary DOM element
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+  
+  // Find the first image
+  const firstImage = tempDiv.querySelector('img');
+  
+  // Return the src attribute if an image is found
+  return firstImage?.getAttribute('src') || undefined;
 }
 
 export async function refreshFeeds() {
@@ -113,34 +113,43 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
 
     console.log('Fetched items:', items);
 
-    const transformedItems: ContentItem[] = items.map(item => {
-      let imageUrl: string | undefined;
+    const transformedItems: ContentItem[] = items
+      // Filter out non-Bulwark videos
+      .filter(item => {
+        if (item.content_type === 'video') {
+          return item.source_url.includes('bulwark');
+        }
+        return true;
+      })
+      .map(item => {
+        let imageUrl: string | undefined;
 
-      // Set the imageUrl based on content type
-      if (item.content_type === 'video' && item.videos?.[0]?.thumbnail_url) {
-        imageUrl = item.videos[0].thumbnail_url;
-      } else if (item.content_type === 'article') {
-        imageUrl = getPlaceholderImage(String(item.id)); // Convert number to string here
-      } else if (item.content_type === 'podcast') {
-        // You might want to add a default podcast artwork here if needed
-        imageUrl = undefined;
-      }
+        // Set the imageUrl based on content type
+        if (item.content_type === 'video' && item.videos?.[0]?.thumbnail_url) {
+          imageUrl = item.videos[0].thumbnail_url;
+        } else if (item.content_type === 'article' && item.articles?.[0]?.content) {
+          // Extract image from article content
+          imageUrl = extractImageFromContent(item.articles[0].content);
+        } else if (item.content_type === 'podcast') {
+          // You might want to add a default podcast artwork here if needed
+          imageUrl = undefined;
+        }
 
-      return {
-        id: String(item.id),
-        title: item.title,
-        description: item.description || '',
-        type: item.content_type as ContentItem['type'],
-        imageUrl,
-        date: item.published_at,
-        link: item.source_url,
-        tags: item.content_tags?.map((tag: any) => ({
-          id: String(tag.tags.id),
-          name: tag.tags.name,
-          type: tag.tags.type
-        })) || []
-      };
-    });
+        return {
+          id: String(item.id),
+          title: item.title,
+          description: item.description || '',
+          type: item.content_type as ContentItem['type'],
+          imageUrl,
+          date: item.published_at,
+          link: item.source_url,
+          tags: item.content_tags?.map((tag: any) => ({
+            id: String(tag.tags.id),
+            name: tag.tags.name,
+            type: tag.tags.type
+          })) || []
+        };
+      });
 
     return {
       items: transformedItems,
