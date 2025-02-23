@@ -1,5 +1,5 @@
-
 import { XMLParser } from 'fast-xml-parser';
+import { createClient } from '@supabase/supabase-js';
 
 export interface ContentTag {
   id: string;
@@ -21,6 +21,37 @@ export interface ContentItem {
 interface PagedResponse {
   items: ContentItem[];
   nextPage: number | null;
+}
+
+// Initialize Supabase client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export async function fetchContent(page: number): Promise<PagedResponse> {
+  try {
+    const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
+      body: { page },
+    });
+
+    if (error) {
+      console.error('Error fetching content:', error);
+      throw error;
+    }
+
+    return {
+      items: data.items,
+      nextPage: data.nextPage
+    };
+  } catch (error) {
+    console.error('Error fetching content:', error);
+    // Fall back to mock data in case of error
+    return {
+      items: MOCK_PODCASTS,
+      nextPage: null
+    };
+  }
 }
 
 // For development, we'll use mock data until we set up a proper backend proxy
@@ -105,15 +136,3 @@ const MOCK_PODCASTS: ContentItem[] = [
     ]
   }
 ];
-
-export async function fetchContent(page: number): Promise<PagedResponse> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // For now, return mock data
-  // In production, this would fetch from the RSS feeds via a backend proxy
-  return {
-    items: MOCK_PODCASTS,
-    nextPage: null // No more pages in our mock data
-  };
-}
