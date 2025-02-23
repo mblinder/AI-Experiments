@@ -24,6 +24,11 @@ interface ContentCardProps {
   activeTag: string | null;
 }
 
+const stripHtmlTags = (html: string) => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent || "";
+};
+
 const ContentCard = ({ 
   id,
   title, 
@@ -35,6 +40,8 @@ const ContentCard = ({
   onTagClick,
   activeTag
 }: ContentCardProps) => {
+  const cleanDescription = stripHtmlTags(description);
+
   return (
     <motion.div whileHover={{ scale: 1.02 }} className="w-full">
       <Link to={`/content/${id}`}>
@@ -59,7 +66,7 @@ const ContentCard = ({
           <div className="p-4">
             <h3 className="text-lg font-semibold mb-2 line-clamp-2">{title}</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
-              {description}
+              {cleanDescription}
             </p>
             <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((tag) => (
