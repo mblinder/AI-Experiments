@@ -7,7 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MAIN_FEED_URL = 'https://thebulwark.com/feed';
+const ARTICLES_FEED_URL = 'https://thebulwark.com/category/articles/feed/';
+const PODCAST_FEED_URL = 'https://feeds.megaphone.fm/TPW1449071235';
 
 // Bulwark Media channel ID
 const YOUTUBE_CHANNEL_ID = 'UCG4Hp1KbGw4e02N7FpPXDgQ';
@@ -37,24 +38,24 @@ serve(async (req) => {
       cdataPositionChar: '\\c'
     });
 
-    // Fetch and parse main RSS feed
-    console.log('Starting to fetch main RSS feed...');
-    const fetchMainFeed = async () => {
+    // Fetch and parse articles feed
+    console.log('Starting to fetch articles feed...');
+    const fetchArticles = async () => {
       try {
-        console.log(`Fetching feed: ${MAIN_FEED_URL}`);
-        const response = await fetch(MAIN_FEED_URL);
-        console.log(`Main feed status:`, response.status);
+        console.log(`Fetching feed: ${ARTICLES_FEED_URL}`);
+        const response = await fetch(ARTICLES_FEED_URL);
+        console.log(`Articles feed status:`, response.status);
         
         if (!response.ok) {
-          console.error(`Failed to fetch main feed: ${response.status}`);
+          console.error(`Failed to fetch articles feed: ${response.status}`);
           return [];
         }
         
         const xmlData = await response.text();
-        console.log(`Main feed data length:`, xmlData.length);
+        console.log(`Articles feed data length:`, xmlData.length);
         
         const result = parser.parse(xmlData);
-        console.log('Main feed parsed:', result?.rss?.channel?.title);
+        console.log('Articles feed parsed:', result?.rss?.channel?.title);
         const items = result?.rss?.channel?.item || [];
         return items.map(item => ({
           id: item.guid || item.link,
@@ -69,7 +70,44 @@ serve(async (req) => {
           tags: [{ id: 'source-article', name: 'Article', type: 'source' }]
         }));
       } catch (error) {
-        console.error(`Error fetching main feed:`, error);
+        console.error(`Error fetching articles feed:`, error);
+        return [];
+      }
+    };
+
+    // Fetch and parse podcast feed
+    console.log('Starting to fetch podcast feed...');
+    const fetchPodcasts = async () => {
+      try {
+        console.log(`Fetching feed: ${PODCAST_FEED_URL}`);
+        const response = await fetch(PODCAST_FEED_URL);
+        console.log(`Podcast feed status:`, response.status);
+        
+        if (!response.ok) {
+          console.error(`Failed to fetch podcast feed: ${response.status}`);
+          return [];
+        }
+        
+        const xmlData = await response.text();
+        console.log(`Podcast feed data length:`, xmlData.length);
+        
+        const result = parser.parse(xmlData);
+        console.log('Podcast feed parsed:', result?.rss?.channel?.title);
+        const items = result?.rss?.channel?.item || [];
+        return items.map(item => ({
+          id: item.guid || item.link,
+          title: item.title,
+          description: item.description?.toString() || '',
+          type: 'podcast',
+          imageUrl: item['itunes:image']?.['@_href'] || 
+                   item.image?.url || 
+                   result?.rss?.channel?.['itunes:image']?.['@_href'],
+          date: item.pubDate || new Date().toISOString(),
+          link: item.link,
+          tags: [{ id: 'source-podcast', name: 'Podcast', type: 'source' }]
+        }));
+      } catch (error) {
+        console.error(`Error fetching podcast feed:`, error);
         return [];
       }
     };
@@ -109,26 +147,25 @@ serve(async (req) => {
     };
 
     console.log('Waiting for all feeds to be fetched...');
-    const [articles, videos] = await Promise.all([
-      fetchMainFeed(),
+    const [articles, podcasts, videos] = await Promise.all([
+      fetchArticles(),
+      fetchPodcasts(),
       fetchYouTubeVideos()
     ]);
     console.log('All feeds fetched successfully');
 
-    // Process articles
-    console.log('Processing articles...');
+    // Process items
+    console.log('Processing all items...');
     console.log('Number of articles:', articles.length);
-
-    // Process YouTube items
-    console.log('Processing YouTube items...');
+    console.log('Number of podcasts:', podcasts.length);
     console.log('Number of videos:', videos.length);
 
     // Combine and sort all items
-    const allItems = [...articles, ...videos].sort((a, b) => 
+    const allItems = [...articles, ...podcasts, ...videos].sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
-    console.log(`Total items found: ${allItems.length} (${articles.length} articles, ${videos.length} videos)`);
+    console.log(`Total items found: ${allItems.length}`);
 
     // Implement pagination
     const itemsPerPage = 10;
