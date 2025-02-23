@@ -20,6 +20,20 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
   isPlaying,
   onMediaClick,
 }) => {
+  const [duration, setDuration] = React.useState<number | null>(null);
+
+  // Format duration to mm:ss or hh:mm:ss
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   if (type === 'article') {
     return imageUrl ? (
       <div className="h-48 w-full overflow-hidden">
@@ -85,6 +99,7 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
               controls={true}
               playing={isPlaying}
               config={playerConfig}
+              onDuration={(duration) => setDuration(duration)}
             />
           )}
         </div>
@@ -108,6 +123,11 @@ const MediaPlayer: React.FC<MediaPlayerProps> = ({
               </svg>
             </div>
           </div>
+          {type === 'video' && duration && (
+            <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 text-white text-xs rounded">
+              {formatDuration(duration)}
+            </div>
+          )}
         </div>
       )}
     </div>
