@@ -67,7 +67,7 @@ const Index = () => {
     initialPageParam: 1
   });
 
-  const allItems = data?.pages?.flatMap((page: PageData) => page.items) ?? [];
+  const allItems = data?.pages.flatMap(page => page.items) ?? [];
 
   return (
     <SidebarProvider>

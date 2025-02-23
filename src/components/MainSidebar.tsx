@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
-import { Podcast, Video, Users, Globe, Settings } from "lucide-react"
+import { Podcast, Video, Users, Globe, Settings, BookOpen } from "lucide-react"
 
 export function MainSidebar() {
   return (
@@ -18,6 +18,12 @@ export function MainSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton>
+              <BookOpen className="h-4 w-4" />
+              <span>Articles</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton>
               <Podcast className="h-4 w-4" />
