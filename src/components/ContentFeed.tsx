@@ -3,12 +3,7 @@ import React, { useRef, useCallback } from 'react';
 import ContentCard from '@/components/ContentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
-
-interface ContentTag {
-  id: string;
-  name: string;
-  type: 'participant' | 'topic' | 'source';
-}
+import type { ContentTag } from '@/services/contentService';
 
 interface ContentItem {
   id: string;
