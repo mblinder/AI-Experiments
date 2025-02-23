@@ -26,6 +26,22 @@ interface PagedResponse {
 
 type ContentType = Database['public']['Enums']['content_type'];
 
+export async function refreshFeeds() {
+  const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
+    body: { 
+      updateDb: true,
+      since: null  // Reset the since parameter to fetch all content
+    }
+  });
+  
+  if (error) {
+    console.error('Error refreshing feeds:', error);
+    throw error;
+  }
+  
+  return data;
+}
+
 export async function fetchContent(page: number, contentType?: ContentType | 'all'): Promise<PagedResponse> {
   try {
     let query = supabase
