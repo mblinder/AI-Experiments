@@ -120,7 +120,7 @@ export async function fetchContent(page: number, contentType?: ContentType | 'al
       if (item.content_type === 'video' && item.videos?.[0]?.thumbnail_url) {
         imageUrl = item.videos[0].thumbnail_url;
       } else if (item.content_type === 'article') {
-        imageUrl = getPlaceholderImage(item.id);
+        imageUrl = getPlaceholderImage(String(item.id)); // Convert number to string here
       } else if (item.content_type === 'podcast') {
         // You might want to add a default podcast artwork here if needed
         imageUrl = undefined;
