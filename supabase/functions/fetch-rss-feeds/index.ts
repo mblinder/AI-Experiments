@@ -7,7 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ARTICLES_FEED_URL = 'http://thetriad.substack.com/feed';
+const ARTICLES_FEEDS = [
+  'http://thetriad.substack.com/feed',
+  'http://morningshots.substack.com/feed'
+];
 const PODCAST_FEED_URL = 'https://feeds.megaphone.fm/TPW1449071235';
 
 // Bulwark Media channel ID
@@ -38,39 +41,50 @@ serve(async (req) => {
       cdataPositionChar: '\\c'
     });
 
-    // Fetch and parse articles feed
-    console.log('Starting to fetch articles feed...');
+    // Fetch and parse articles feeds
+    console.log('Starting to fetch articles feeds...');
     const fetchArticles = async () => {
       try {
-        console.log(`Fetching feed: ${ARTICLES_FEED_URL}`);
-        const response = await fetch(ARTICLES_FEED_URL);
-        console.log(`Articles feed status:`, response.status);
+        const allArticles = await Promise.all(
+          ARTICLES_FEEDS.map(async (feedUrl) => {
+            console.log(`Fetching feed: ${feedUrl}`);
+            const response = await fetch(feedUrl);
+            console.log(`Articles feed status for ${feedUrl}:`, response.status);
+            
+            if (!response.ok) {
+              console.error(`Failed to fetch articles feed ${feedUrl}: ${response.status}`);
+              return [];
+            }
+            
+            const xmlData = await response.text();
+            console.log(`Articles feed data length for ${feedUrl}:`, xmlData.length);
+            
+            const result = parser.parse(xmlData);
+            console.log('Articles feed parsed:', result?.rss?.channel?.title);
+            const items = result?.rss?.channel?.item || [];
+            return items.map(item => ({
+              id: item.guid || item.link,
+              title: item.title,
+              description: item.description?.toString() || '',
+              type: 'article',
+              imageUrl: item.enclosure?.['@_url'] || 
+                       item['media:content']?.['@_url'] || 
+                       item['media:thumbnail']?.['@_url'],
+              date: item.pubDate || new Date().toISOString(),
+              link: item.link,
+              tags: [{ 
+                id: 'source-article', 
+                name: feedUrl.includes('thetriad') ? 'The Triad' : 'Morning Shots', 
+                type: 'source' 
+              }]
+            }));
+          })
+        );
         
-        if (!response.ok) {
-          console.error(`Failed to fetch articles feed: ${response.status}`);
-          return [];
-        }
-        
-        const xmlData = await response.text();
-        console.log(`Articles feed data length:`, xmlData.length);
-        
-        const result = parser.parse(xmlData);
-        console.log('Articles feed parsed:', result?.rss?.channel?.title);
-        const items = result?.rss?.channel?.item || [];
-        return items.map(item => ({
-          id: item.guid || item.link,
-          title: item.title,
-          description: item.description?.toString() || '',
-          type: 'article',
-          imageUrl: item.enclosure?.['@_url'] || 
-                   item['media:content']?.['@_url'] || 
-                   item['media:thumbnail']?.['@_url'],
-          date: item.pubDate || new Date().toISOString(),
-          link: item.link,
-          tags: [{ id: 'source-article', name: 'Article', type: 'source' }]
-        }));
+        // Flatten the array of arrays into a single array of articles
+        return allArticles.flat();
       } catch (error) {
-        console.error(`Error fetching articles feed:`, error);
+        console.error(`Error fetching articles feeds:`, error);
         return [];
       }
     };
