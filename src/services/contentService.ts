@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -27,19 +26,27 @@ interface PagedResponse {
 type ContentType = Database['public']['Enums']['content_type'];
 
 export async function refreshFeeds() {
-  // Call the edge function without a since parameter - it will use the global config
-  const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
-    body: { 
-      updateDb: true
-    }
-  });
+  console.log('Starting feed refresh...');
   
-  if (error) {
-    console.error('Error refreshing feeds:', error);
+  try {
+    // Call the edge function to fetch new content
+    const { data, error } = await supabase.functions.invoke('fetch-rss-feeds', {
+      body: { 
+        updateDb: true
+      }
+    });
+    
+    if (error) {
+      console.error('Error refreshing feeds:', error);
+      throw error;
+    }
+    
+    console.log('Feed refresh completed:', data);
+    return data;
+  } catch (error) {
+    console.error('Failed to refresh feeds:', error);
     throw error;
   }
-  
-  return data;
 }
 
 export async function fetchContent(page: number, contentType?: ContentType | 'all'): Promise<PagedResponse> {
