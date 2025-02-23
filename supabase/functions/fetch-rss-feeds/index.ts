@@ -3,6 +3,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { fetchArticles } from './articleService.ts';
 import { fetchPodcasts } from './podcastService.ts';
 import { fetchYouTubeVideos } from './youtubeService.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,57 +11,52 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('Edge Function started');
-  console.log('Request method:', req.method);
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { page = 1 } = await req.json();
-    console.log('Fetching content for page:', page);
-
     console.log('Starting to fetch all content...');
     const [articles, podcasts, videos] = await Promise.all([
       fetchArticles(),
       fetchPodcasts(),
       fetchYouTubeVideos()
     ]);
-    console.log('All content fetched successfully');
 
-    // Process items and ensure dates are properly parsed
     const allItems = [...articles, ...podcasts, ...videos].map(item => ({
-      ...item,
-      date: new Date(item.date).toISOString() // Normalize all dates to ISO string format
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      type: item.type,
+      image_url: item.imageUrl,
+      date: item.date,
+      link: item.link,
+      source_tag_id: item.tags[0]?.id,
+      source_tag_name: item.tags[0]?.name,
     }));
 
-    // Sort all items by date
-    const sortedItems = allItems.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Total items found: ${sortedItems.length}`);
-    console.log('Sample of items to verify content:');
-    sortedItems.slice(0, 5).forEach(item => {
-      console.log(`${item.type} - ${item.date} - ${item.title}`);
-    });
+    // Upsert all items into the database
+    const { error } = await supabase
+      .from('content_items')
+      .upsert(allItems, {
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
 
-    // Implement pagination
-    const itemsPerPage = 10;
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedItems = sortedItems.slice(startIndex, endIndex);
-    
-    const hasMorePages = endIndex < sortedItems.length;
-    
-    console.log('Sending response with items:', paginatedItems.length);
+    if (error) {
+      console.error('Error upserting items:', error);
+      throw error;
+    }
+
+    console.log(`Successfully processed ${allItems.length} items`);
+
     return new Response(
-      JSON.stringify({
-        items: paginatedItems,
-        nextPage: hasMorePages ? page + 1 : null,
-        total: sortedItems.length
-      }),
+      JSON.stringify({ success: true, itemsProcessed: allItems.length }),
       { 
         headers: {
           ...corsHeaders,
@@ -70,12 +66,10 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error processing request:', error);
-    console.error('Stack trace:', error.stack);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
-        details: error.message,
-        stack: error.stack 
+        details: error.message
       }),
       { 
         status: 500,
