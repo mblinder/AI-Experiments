@@ -4,8 +4,7 @@ import { createXmlParser, fetchRssFeed } from './rssUtils.ts';
 
 const PODCAST_FEEDS = [
   'https://api.substack.com/feed/podcast/87281/s/87957/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss',
-  'https://api.substack.com/feed/podcast/87281/s/87961/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss',
-  'https://feeds.megaphone.fm/TPW1449071235'
+  'https://api.substack.com/feed/podcast/87281/s/87961/private/24cf0715-6d20-4abd-bd0b-1040d00de2d5.rss'
 ];
 
 export async function fetchPodcasts(): Promise<ContentItem[]> {
