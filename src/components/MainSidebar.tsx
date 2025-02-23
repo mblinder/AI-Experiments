@@ -7,6 +7,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  useSidebar
 } from "@/components/ui/sidebar"
 import { Newspaper, Video, Headphones, Settings } from "lucide-react"
 
@@ -16,6 +17,18 @@ interface MainSidebarProps {
 }
 
 export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
+  const { isMobile, setOpen, setOpenMobile } = useSidebar();
+
+  const handleMenuItemClick = (type: 'all' | 'article' | 'video' | 'podcast') => {
+    onMenuClick(type);
+    // Close the appropriate menu based on device type
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  };
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
@@ -25,7 +38,7 @@ export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton 
-              onClick={() => onMenuClick('article')}
+              onClick={() => handleMenuItemClick('article')}
               isActive={activeType === 'article'}
             >
               <Newspaper className="h-4 w-4" />
@@ -34,7 +47,7 @@ export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton 
-              onClick={() => onMenuClick('video')}
+              onClick={() => handleMenuItemClick('video')}
               isActive={activeType === 'video'}
             >
               <Video className="h-4 w-4" />
@@ -43,7 +56,7 @@ export function MainSidebar({ onMenuClick, activeType }: MainSidebarProps) {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton 
-              onClick={() => onMenuClick('podcast')}
+              onClick={() => handleMenuItemClick('podcast')}
               isActive={activeType === 'podcast'}
             >
               <Headphones className="h-4 w-4" />
