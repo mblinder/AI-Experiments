@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MainSidebar } from '@/components/MainSidebar';
 import ContentFeed from '@/components/ContentFeed';
@@ -66,20 +67,23 @@ const Index = () => {
     initialPageParam: 1
   });
 
-  const allItems = data?.pages?.flatMap(page => page.items) || [];
+  const allItems = data?.pages?.map(page => page.items).flat() || [];
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <MainSidebar />
         <main className="flex-1">
-          <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 dark:bg-black/80 border-b border-gray-200/50 dark:border-gray-800/50 h-16 flex items-center px-4">
-            <SidebarTrigger className="mr-4" />
-            <img 
-              src="/lovable-uploads/83e64506-053f-49ba-8f2d-3e6750644b5a.png" 
-              alt="The Bulwark"
-              className="h-8 w-auto"
-            />
+          <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 dark:bg-black/80 border-b border-gray-200/50 dark:border-gray-800/50 h-16">
+            <div className="h-full w-full max-w-7xl mx-auto px-4 flex items-center justify-between">
+              <div className="w-8" /> {/* Spacer to help center the logo */}
+              <img 
+                src="/lovable-uploads/fa7cdb76-0bf9-45f8-9906-ca514d9c590b.png"
+                alt="The Bulwark"
+                className="h-8 w-auto"
+              />
+              <SidebarTrigger className="w-8" />
+            </div>
           </header>
           <ContentFeed 
             items={allItems} 
